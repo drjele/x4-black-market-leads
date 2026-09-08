@@ -162,3 +162,7 @@ The dangerous half is that a wrong cue path guarded by `@` evaluates to null in 
 Vanilla only ever keys tables by objects — `md.$ShadyGuyMap.{$ShadyGuy}`, `$CleanupTable.{event.param}`. `BuildLeadRows` now keeps a plain list of stations and reads the marketeer and its state back off each one, so there is no table at all.
 
 Sorting went the same way. There is no "sort by element N" in `sort_list`, which is what the string keys were for; `sortbygatedistancefrom="player.entity"` sorts the stations by jump distance instead, which is more useful than alphabetical anyway.
+
+## Register_Options_Menu needs $enabled
+
+The list menu registered cleanly — `RegisterMenu` fires, the command is sent, nothing is logged as wrong — and still no row appeared under Extension Options. `ui/simple_menu/options_menu.lua` only draws a registered submenu when `if not spec.private and spec.enabled then`, and nothing fills a default for `enabled`, so leaving it out means `nil`, which is false. The MD documentation says "Bool, true to enable the menu (default)"; the default does not exist. Pass `$enabled = true` explicitly.

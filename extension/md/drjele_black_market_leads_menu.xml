@@ -14,6 +14,7 @@
                     $title   = 'Black Market Leads - known stations',
                     $columns = 5,
                     $onOpen  = FillOptionsMenu,
+                    $enabled = true,
                     ]"/>
                 <debug_text text="'DrJele black market leads: list menu registered with the Simple Menu API'"
                             chance="if global.$DrJeleBlackMarketDebugChance? then global.$DrJeleBlackMarketDebugChance else 0"/>
