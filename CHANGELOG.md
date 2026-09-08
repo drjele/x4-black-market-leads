@@ -13,9 +13,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Logbook entry under Tips, plus an optional ticker line, the first time a black marketeer is seen on
   a station the player already knows. The entry opens the map on that station.
-- Lead planting: while the player is at such a station and its marketeer is still locked, the mod
-  asks the vanilla signal leak manager to run a pass on it, so the unlock lead is actually placed.
-  Per-station cooldown, attempt limit and leak cap.
+- Lead planting: when the player flies up to such a station and its marketeer is still locked, the
+  mod asks the vanilla signal leak manager to run a pass on it, so the unlock lead is actually
+  placed. Per-station cooldown, attempt limit and leak cap.
 - Black Market Leads menu through SirNukes Simple Menu API, listing the marketeers on stations the
   player knows with sector, owner and status, reachable from Extension Options, the `/leads` chat
   command, the station right-click menu and a bindable hotkey.
@@ -23,6 +23,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Notes
 
+- Entirely event driven: one pass over the game's black marketeer table per sector change, then
+  attention and discovery events on the one or two stations in that sector that carry a locked
+  marketeer. No periodic scan.
 - Nothing is ever reported, listed or acted on for a station the game does not consider known to the
   player, so exploration is unchanged.
 - Stations without docking permission are never given a lead, because the vanilla mission setup

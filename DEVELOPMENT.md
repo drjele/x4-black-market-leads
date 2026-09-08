@@ -36,7 +36,15 @@ The whole mod reads one vanilla global: `md.$ShadyGuyMap`, written by `md/npc_sh
 
 Relevant properties: `station.shadyguy` (entity or null), `npc.isshadyguy`, `npc.tradesvisible` (true once the player has unlocked that dealer), `object.isknown`, `object.scannedlevel`.
 
-`Tick` walks only the player's current sector and only stations with `isknown`. That restriction is the point of the mod and is deliberately not a setting: a marketeer in an unvisited sector must stay as invisible as it is in vanilla.
+The mod is entirely event driven; there is no periodic scan. `md.$ShadyGuyMap` holds roughly one entry per sector, so a poll over it would be a few hundred property lookups every few seconds for nothing.
+
+There is exactly one walk of the map, in `SectorArrived` on `event_object_changed_sector object="player.entity"`. It rebuilds the `State.$Watched` group with the stations in the player's new sector whose marketeer is still locked — normally one, occasionally two. Everything after that hangs off events on that handful of objects: `StationApproached` on `event_object_changed_attention group="State.$Watched"` when a station crosses to `attention.visible`, and `StationBecameKnown` on `event_object_known_to_player group="State.$Watched"`. The XSD documents `groupeventsource` as "the group is required to exist but may be empty; adding/removing group members is possible even after the event is set up", which is what makes rebuilding the group under a live listener safe.
+
+`attention.visible` is the right trigger for two reasons: it is the moment the player is actually close enough to scan, and it is the same moment vanilla's own `Manager.ObjectChangedAttention` seeds the station, so the mod arrives right after vanilla has had its turn.
+
+No retry machinery. Every reason `PlantLead` bails out is either permanent for this visit (no docking permission, faction excluded, attempt cap) or self-correcting through the same events (attention dropped, cleanup queued, no free slots) — flying back up to the station raises the attention event again. The cooldown in `State.$Attempts` is what stops a re-approach from planting a second time.
+
+Only stations with `isknown` are ever reported or acted on. That restriction is the point of the mod and is deliberately not a setting: a marketeer in an unvisited sector must stay as invisible as it is in vanilla. Stations are put in the watch group before the `isknown` check, so one discovered while the player is already in the sector still fires through `StationBecameKnown`.
 
 Vanilla unlock path, for reference. `md/signal_leaks.xml` cue `Manager.GenerateSignalLeaks` rolls leak counts in library `CalculateLeakCounts` and, for the first mission leak only, swaps in `$ShadyGuyMissionTable` when `$LeakObject.controlentity.{controlpost.shadyguy}` exists. That table has a single entry, `GM_BringItems__Trigger`, page 30135, text offsets 1000 and 1100 — the one-hour illegal-item delivery whose reward text is `{30135,106}` "Access to unsanctioned trade offers". On success `md/gm_bringitems.xml` runs `set_entity_traits tradesvisible="true"` and `unlock_achievement BLACK_MARKET`, and only then does `md/npc_instantiation.xml` cue `PlaceShadyGuy` move the character into a bar.
 
@@ -52,7 +60,9 @@ The leak census and the slot filter replicate `CalculateLeakCounts` and `GetLeak
 
 `State.$Attempts` and `State.$Announced` are tables keyed by station object, never variables written onto the component: X4 refuses `component.{...}.$var`, and a failed property lookup does not skip the enclosing `do_if`. `PruneState` iterates both in reverse because it mutates them while walking. Entries are dropped when the station is gone, when its marketeer has become `tradesvisible`, or after two hours without a sighting.
 
-`Tick` keeps an explicit `State.$NextTickTime` stamp; `checkinterval` does not throttle a cue that resets itself, and the child `Rearm` cue resets `Tick` one second after each pass.
+`Evaluate` captures `event.param` in a first `<actions>` block, waits `30s`, and only then runs the guards. The capture has to happen before the delay — vanilla's `NPC_ShadyGuy.TrackedStationDestroyed` uses the same shape for the same reason. The wait lets the vanilla pass for that station finish; `PlaceMissionLeakOnSurface` sleeps 5s and then retries up to ten times at 1s. The delay is a literal because `<delay>` does not take a runtime expression.
+
+The guards live in `PlantLead`, a `purpose="run_actions"` library, purely so they can bail out with `<return/>`. The XSD is explicit that `return` is "supported in AI scripts, as well as MD libraries with purpose=run_actions", and there is not a single cue-level `<return/>` anywhere in the shipped scripts — twelve nested `do_if` levels was the alternative.
 
 `Configuration` is `instantiate="true" namespace="static"`, so it writes plain `$var` and never `Configuration.$var` — self-qualifying inside such a cue sends the write to the running instance while other cues read the static one, silently.
 

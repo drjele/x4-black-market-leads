@@ -27,10 +27,14 @@ Requires X4: Foundations 9.00. Works on an existing savegame. No new game needed
 - **Points at the station.** The first time you are in a sector where a station you already know has
   a black marketeer aboard, you get one logbook entry under **Tips**, and optionally a ticker line.
   Clicking the entry opens the map on that station.
-- **Makes the scan pay off.** While you are there and the marketeer is still locked, the mod asks the
-  vanilla signal leak manager to run a pass on that station, so the unlock lead gets placed instead
-  of maybe getting placed. Per-station cooldown, attempt limit and a cap on how many leaks a station
-  can be pushed to.
+- **Makes the scan pay off.** When you fly up to such a station and its marketeer is still locked,
+  the mod asks the vanilla signal leak manager to run a pass on it, so the unlock lead gets placed
+  instead of maybe getting placed. Per-station cooldown, attempt limit and a cap on how many leaks a
+  station can be pushed to. If a mission leak is already on the hull it does nothing — that one is
+  the one to scan.
+- **Costs nothing while you play.** There is no periodic scan. One pass over the game's marketeer
+  table when you change sector, then everything else runs off events on the one or two stations in
+  that sector that actually matter.
 - **Remembers.** A list of the marketeers on stations you know — sector, station, owner, and what is
   currently blocking each one.
 
