@@ -154,3 +154,11 @@ The per-station cooldown does the work of not re-clearing a hull the mod has alr
 Variables are different, because they hang off a named cue: `md.Signal_Leaks.Manager.$CleanupTable` and `md.GenericMissions.Manager.$Disabled` are correct, and vanilla writes the second one verbatim. The shape is `md.<script>.<cue>.$var`, with the same flat cue name.
 
 The dangerous half is that a wrong cue path guarded by `@` evaluates to null in silence, so the guard simply never fires. Only an unguarded reference, like the `signal_cue_instantly` that exposed this one, reports anything.
+
+## Table keys must not be strings
+
+`$ByKey.{$Key}` with `$Key` built as `'%s|%s|%s'.[sector, station, object]` fails at runtime with `Property lookup failed` for every station whose name or sector contains an apostrophe — `Windfall IV Aurora's Dream` was the one that exposed it. The write appears to succeed and the read never finds the entry, so the row is built from nulls, the widget text comes out empty, and the Lua side dies with `helper.xpl: attempt to index field 'text' (a nil value)`, which closes the menu and drops the player out of the map.
+
+Vanilla only ever keys tables by objects — `md.$ShadyGuyMap.{$ShadyGuy}`, `$CleanupTable.{event.param}`. `BuildLeadRows` now keeps a plain list of stations and reads the marketeer and its state back off each one, so there is no table at all.
+
+Sorting went the same way. There is no "sort by element N" in `sort_list`, which is what the string keys were for; `sortbygatedistancefrom="player.entity"` sorts the stations by jump distance instead, which is more useful than alphabetical anyway.

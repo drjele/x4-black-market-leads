@@ -15,6 +15,8 @@
                     $columns = 5,
                     $onOpen  = FillOptionsMenu,
                     ]"/>
+                <debug_text text="'DrJele black market leads: list menu registered with the Simple Menu API'"
+                            chance="if global.$DrJeleBlackMarketDebugChance? then global.$DrJeleBlackMarketDebugChance else 0"/>
             </actions>
         </cue>
 
@@ -134,10 +136,10 @@
                 <signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[$col = 4, $text = 'Status', $titleColor = 'Color.text_normal']"/>
                 <signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[$col = 5, $text = '', $titleColor = 'Color.text_normal']"/>
 
-                <!-- Sorted by sector then station name, so the list does not reshuffle between openings.
-                     sort_list has no "sort by element N" mode, so the sort runs over unique string keys. -->
-                <set_value name="$Keys" exact="[]"/>
-                <set_value name="$ByKey" exact="table[]"/>
+                <!-- No string keyed table: a station or sector name containing an apostrophe, such as
+                     "Windfall IV Aurora's Dream", makes the lookup fail. The rows are a plain list of
+                     stations, sorted by jump distance, and everything else is read back off the station. -->
+                <set_value name="$Stations" exact="[]"/>
                 <do_if value="md.$ShadyGuyMap?">
                     <do_for_each name="$ShadyGuy" valuename="$Station" in="md.$ShadyGuyMap">
                         <do_if value="not @$Station.exists or not $Station.isclass.station">
@@ -154,14 +156,14 @@
                         <do_if value="not $Unlocked and 1 != $ListLocked">
                             <continue/>
                         </do_if>
-                        <set_value name="$Key" exact="'%s|%s|%s'.[$Station.sector.knownname, $Station.knownname, $Station]"/>
-                        <append_to_list name="$Keys" exact="$Key"/>
-                        <set_value name="$ByKey.{$Key}" exact="[$Station, $ShadyGuy, $Unlocked]"/>
+                        <append_to_list name="$Stations" exact="$Station"/>
                     </do_for_each>
                 </do_if>
-                <sort_list list="$Keys"/>
+                <do_if value="$Stations.count and player.entity">
+                    <sort_list list="$Stations" sortbygatedistancefrom="player.entity"/>
+                </do_if>
 
-                <do_if value="not $Keys.count">
+                <do_if value="not $Stations.count">
                     <signal_cue_instantly cue="md.Simple_Menu_API.Add_Row" param="table[$selectable = false]"/>
                     <signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[
                         $col = 1, $colSpan = 5, $wordwrap = true,
@@ -169,10 +171,9 @@
                         ]"/>
                 </do_if>
 
-                <do_for_each name="$Key" in="$Keys">
-                    <set_value name="$Station" exact="$ByKey.{$Key}.{1}"/>
-                    <set_value name="$ShadyGuy" exact="$ByKey.{$Key}.{2}"/>
-                    <set_value name="$Unlocked" exact="$ByKey.{$Key}.{3}"/>
+                <do_for_each name="$Station" in="$Stations">
+                    <set_value name="$ShadyGuy" exact="@$Station.shadyguy"/>
+                    <set_value name="$Unlocked" exact="@$ShadyGuy.tradesvisible"/>
 
                     <find_object_component name="$Leaks" object="$Station" class="class.signalleak" multiple="true"/>
                     <do_if value="not @$Leaks.count">
