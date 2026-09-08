@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mdscript name="DrJele_BlackMarketLeadsMenu" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+    <cues>
+
+        <!-- Everything in this file needs SirNukes Mod Support APIs. Without it none of these cues ever fire. -->
+
+        <cue name="RegisterMenu" instantiate="true" version="1">
+            <conditions>
+                <event_cue_signalled cue="md.Simple_Menu_API.Reloaded"/>
+            </conditions>
+            <actions>
+                <signal_cue_instantly cue="md.Simple_Menu_API.Register_Options_Menu" param="table[
+                    $id      = 'drjele_black_market_leads_menu',
+                    $title   = 'Black Market Leads',
+                    $columns = 5,
+                    $onOpen  = FillOptionsMenu,
+                    ]"/>
+            </actions>
+        </cue>
+
+        <cue name="RegisterChatCommands" instantiate="true" version="1">
+            <conditions>
+                <event_cue_signalled cue="md.Chat_Window_API.Reloaded"/>
+            </conditions>
+            <actions>
+                <signal_cue_instantly cue="md.Chat_Window_API.Register_Command" param="table[
+                    $name     = '/leads',
+                    $callback = OpenStandaloneMenu,
+                    ]"/>
+                <signal_cue_instantly cue="md.Chat_Window_API.Register_Command" param="table[
+                    $name     = '/leadsdebug',
+                    $callback = DumpShadyGuys,
+                    ]"/>
+            </actions>
+        </cue>
+
+        <!-- Registered either way; on Linux the hotkey backend needs a named pipe server that is Windows only,
+             which is why the chat command, the interact menu and Extension Options all open the same menu. -->
+        <cue name="RegisterHotkey" instantiate="true" version="1">
+            <conditions>
+                <event_cue_signalled cue="md.Hotkey_API.Reloaded"/>
+            </conditions>
+            <actions>
+                <signal_cue_instantly cue="md.Hotkey_API.Register_Action" param="table[
+                    $id          = 'drjele_bml_open',
+                    $name        = 'Black Market Leads',
+                    $description = 'Opens the list of black marketeers on stations you already know',
+                    $category    = 'Black Market Leads',
+                    $onPress     = OpenStandaloneMenu,
+                    $contexts    = ['flying', 'walking', 'menus'],
+                    ]"/>
+            </actions>
+        </cue>
+
+        <cue name="RegisterInteractActions" instantiate="true" version="1">
+            <conditions>
+                <event_cue_signalled cue="md.Interact_Menu_API.Get_Actions"/>
+            </conditions>
+            <actions>
+                <do_if value="1 == (if global.$DrJeleBlackMarketInteract? then global.$DrJeleBlackMarketInteract else 1)">
+                    <set_value name="$Target" exact="event.param.$object"/>
+                    <do_if value="@$Target.exists and $Target.isclass.station and $Target.isknown and @$Target.shadyguy">
+                        <signal_cue_instantly cue="md.Interact_Menu_API.Add_Action" param="table[
+                            $id        = 'drjele_bml_station',
+                            $section   = 'main',
+                            $text      = 'Black Market Leads',
+                            $text2     = if $Target.shadyguy.tradesvisible then 'unlocked' else 'locked',
+                            $icon      = 'shadyguy',
+                            $mouseover = 'A black marketeer is aboard %s'.[$Target.knownname],
+                            $callback  = OpenStandaloneMenu,
+                            ]"/>
+                    </do_if>
+                </do_if>
+            </actions>
+        </cue>
+
+        <cue name="OpenStandaloneMenu" instantiate="true" namespace="this">
+            <conditions>
+                <event_cue_signalled/>
+            </conditions>
+            <actions>
+                <signal_cue_instantly cue="md.Simple_Menu_API.Create_Menu" param="table[
+                    $id      = 'drjele_black_market_leads',
+                    $title   = 'Black Market Leads',
+                    $columns = 5,
+                    $width   = 900,
+                    ]"/>
+                <include_actions ref="BuildLeadRows"/>
+            </actions>
+        </cue>
+
+        <!-- Create_Menu must not be called here; the options menu frame already exists. -->
+        <cue name="FillOptionsMenu" instantiate="true" namespace="this">
+            <conditions>
+                <event_cue_signalled/>
+            </conditions>
+            <actions>
+                <include_actions ref="BuildLeadRows"/>
+            </actions>
+        </cue>
+
+        <cue name="DumpShadyGuys" instantiate="true">
+            <conditions>
+                <event_cue_signalled/>
+            </conditions>
+            <actions>
+                <signal_cue_instantly cue="md.NPC_ShadyGuy.GameStarted.ShadyGuy_DEBUG"/>
+            </actions>
+        </cue>
+
+        <cue name="OnLocateClicked" instantiate="true">
+            <conditions>
+                <event_cue_signalled/>
+            </conditions>
+            <actions>
+                <do_if value="@event.param.$echo.exists">
+                    <write_to_logbook category="tips" interaction="showonmap" object="event.param.$echo"
+                                      title="{20208,10801}"
+                                      text="'%s - %s'.[event.param.$echo.knownname, event.param.$echo.sector.knownname]"/>
+                </do_if>
+            </actions>
+        </cue>
+
+        <library name="BuildLeadRows">
+            <actions>
+                <set_value name="$ListLocked" exact="if global.$DrJeleBlackMarketListLocked? then global.$DrJeleBlackMarketListLocked else 1"/>
+                <set_value name="$ListUnlocked" exact="if global.$DrJeleBlackMarketListUnlocked? then global.$DrJeleBlackMarketListUnlocked else 1"/>
+                <set_value name="$MaxAttempts" exact="if @global.$DrJeleBlackMarketLeadsConfig.$MaxAttemptsPerStation then global.$DrJeleBlackMarketLeadsConfig.$MaxAttemptsPerStation else 5"/>
+
+                <signal_cue_instantly cue="md.Simple_Menu_API.Add_Row" param="table[$selectable = false]"/>
+                <signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[$col = 1, $text = 'Sector', $titleColor = 'Color.text_normal']"/>
+                <signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[$col = 2, $text = 'Station', $titleColor = 'Color.text_normal']"/>
+                <signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[$col = 3, $text = 'Owner', $titleColor = 'Color.text_normal']"/>
+                <signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[$col = 4, $text = 'Status', $titleColor = 'Color.text_normal']"/>
+                <signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[$col = 5, $text = '', $titleColor = 'Color.text_normal']"/>
+
+                <!-- Sorted by sector then station name, so the list does not reshuffle between openings.
+                     sort_list has no "sort by element N" mode, so the sort runs over unique string keys. -->
+                <set_value name="$Keys" exact="[]"/>
+                <set_value name="$ByKey" exact="table[]"/>
+                <do_if value="md.$ShadyGuyMap?">
+                    <do_for_each name="$ShadyGuy" valuename="$Station" in="md.$ShadyGuyMap">
+                        <do_if value="not @$Station.exists or not $Station.isclass.station">
+                            <continue/>
+                        </do_if>
+                        <!-- The scope pledge: a station the player has never discovered is never listed. -->
+                        <do_if value="not $Station.isknown">
+                            <continue/>
+                        </do_if>
+                        <set_value name="$Unlocked" exact="@$ShadyGuy.tradesvisible"/>
+                        <do_if value="$Unlocked and 1 != $ListUnlocked">
+                            <continue/>
+                        </do_if>
+                        <do_if value="not $Unlocked and 1 != $ListLocked">
+                            <continue/>
+                        </do_if>
+                        <set_value name="$Key" exact="'%s|%s|%s'.[$Station.sector.knownname, $Station.knownname, $Station]"/>
+                        <append_to_list name="$Keys" exact="$Key"/>
+                        <set_value name="$ByKey.{$Key}" exact="[$Station, $ShadyGuy, $Unlocked]"/>
+                    </do_for_each>
+                </do_if>
+                <sort_list list="$Keys"/>
+
+                <do_if value="not $Keys.count">
+                    <signal_cue_instantly cue="md.Simple_Menu_API.Add_Row" param="table[$selectable = false]"/>
+                    <signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[
+                        $col = 1, $colSpan = 5, $wordwrap = true,
+                        $text = 'No black marketeer on any station you know of yet. Keep exploring - stations you have discovered show up here on their own.',
+                        ]"/>
+                </do_if>
+
+                <do_for_each name="$Key" in="$Keys">
+                    <set_value name="$Station" exact="$ByKey.{$Key}.{1}"/>
+                    <set_value name="$ShadyGuy" exact="$ByKey.{$Key}.{2}"/>
+                    <set_value name="$Unlocked" exact="$ByKey.{$Key}.{3}"/>
+
+                    <find_object_component name="$Leaks" object="$Station" class="class.signalleak" multiple="true"/>
+                    <do_if value="not @$Leaks.count">
+                        <set_value name="$Leaks" exact="[]"/>
+                    </do_if>
+                    <set_value name="$HasVoiceLeak" exact="false"/>
+                    <do_for_each name="$Leak" in="$Leaks">
+                        <do_if value="$Leak.type == signalleaktype.voice">
+                            <set_value name="$HasVoiceLeak" exact="true"/>
+                            <break/>
+                        </do_if>
+                    </do_for_each>
+
+                    <do_if value="$Unlocked">
+                        <set_value name="$Status" exact="'Unlocked'"/>
+                    </do_if>
+                    <do_elseif value="$HasVoiceLeak">
+                        <set_value name="$Status" exact="'Lead active - scan it'"/>
+                    </do_elseif>
+                    <do_elseif value="not $Station.hasrelation.dock.{faction.player}">
+                        <set_value name="$Status" exact="'Locked - no docking permission'"/>
+                    </do_elseif>
+                    <do_elseif value="@md.DrJele_BlackMarketLeads.State.$Attempts.{$Station} and md.DrJele_BlackMarketLeads.State.$Attempts.{$Station}.{2} ge $MaxAttempts">
+                        <set_value name="$Status" exact="'Locked - no lead could be placed'"/>
+                    </do_elseif>
+                    <do_else>
+                        <set_value name="$Status" exact="'Locked'"/>
+                    </do_else>
+
+                    <signal_cue_instantly cue="md.Simple_Menu_API.Add_Row" param="table[$selectable = true]"/>
+                    <signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[$col = 1, $text = $Station.sector.knownname]"/>
+                    <signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[$col = 2, $text = $Station.knownname]"/>
+                    <signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[$col = 3, $text = $Station.owner.name]"/>
+                    <signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[$col = 4, $text = $Status]"/>
+                    <signal_cue_instantly cue="md.Simple_Menu_API.Make_Button" param="table[
+                        $col     = 5,
+                        $text    = 'Locate',
+                        $onClick = OnLocateClicked,
+                        $echo    = $Station,
+                        ]"/>
+                </do_for_each>
+            </actions>
+        </library>
+
+    </cues>
+</mdscript>

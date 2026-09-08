@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mdscript name="DrJele_BlackMarketLeadsOptions" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+    <cues>
+
+        <cue name="RegisterOptions" instantiate="true" version="1">
+            <conditions>
+                <event_cue_signalled cue="md.Simple_Menu_Options.Reloaded"/>
+            </conditions>
+            <actions>
+                <signal_cue_instantly
+                        cue="md.Simple_Menu_Options.Register_Option"
+                        param="table[
+            $id        = 'drjele_black_market_force_leaks',
+            $category  = 'Black Market Leads',
+            $name      = 'Plant a lead worth scanning',
+            $mouseover = 'On makes the game seed the unlock lead on a station whose black marketeer is still locked, once you are there and the station is one you already know. Off leaves leak generation entirely to the game, and the mod only reports what it sees.',
+            $type      = 'button',
+            $default   = 1,
+            $callback  = OnForceLeaksChanged,
+            ]"/>
+                <signal_cue_instantly
+                        cue="md.Simple_Menu_Options.Register_Option"
+                        param="table[
+            $id        = 'drjele_black_market_force_cooldown_min',
+            $category  = 'Black Market Leads',
+            $name      = 'Retry the same station after',
+            $mouseover = 'Game time before the mod tries a second time on the same station. Lower means faster results and more signal leaks on the hull.',
+            $type      = 'slidercell',
+            $default   = 30,
+            $args      = table[$min = 5, $max = 120, $step = 5, $suffix = ' min'],
+            $callback  = OnForceCooldownChanged,
+            ]"/>
+                <signal_cue_instantly
+                        cue="md.Simple_Menu_Options.Register_Option"
+                        param="table[
+            $id        = 'drjele_black_market_logbook',
+            $category  = 'Black Market Leads',
+            $name      = 'Logbook entry for a new lead',
+            $mouseover = 'Writes one entry under Tips the first time a black marketeer is spotted on a station you know. Clicking the entry opens the map on that station.',
+            $type      = 'button',
+            $default   = 1,
+            $callback  = OnLogbookChanged,
+            ]"/>
+                <signal_cue_instantly
+                        cue="md.Simple_Menu_Options.Register_Option"
+                        param="table[
+            $id        = 'drjele_black_market_notify',
+            $category  = 'Black Market Leads',
+            $name      = 'Ticker line for a new lead',
+            $mouseover = 'Also shows a short message in the ticker when a lead is first reported. Needs the logbook entry to be on.',
+            $type      = 'button',
+            $default   = 1,
+            $callback  = OnNotifyChanged,
+            ]"/>
+                <signal_cue_instantly
+                        cue="md.Simple_Menu_Options.Register_Option"
+                        param="table[
+            $id        = 'drjele_black_market_list_locked',
+            $category  = 'Black Market Leads',
+            $name      = 'List locked marketeers',
+            $mouseover = 'Show the ones you have not unlocked yet in the menu. Only ever stations you already know.',
+            $type      = 'button',
+            $default   = 1,
+            $callback  = OnListLockedChanged,
+            ]"/>
+                <signal_cue_instantly
+                        cue="md.Simple_Menu_Options.Register_Option"
+                        param="table[
+            $id        = 'drjele_black_market_list_unlocked',
+            $category  = 'Black Market Leads',
+            $name      = 'List unlocked marketeers',
+            $mouseover = 'Show the ones you have already unlocked in the menu, so you can find your way back to them.',
+            $type      = 'button',
+            $default   = 1,
+            $callback  = OnListUnlockedChanged,
+            ]"/>
+                <signal_cue_instantly
+                        cue="md.Simple_Menu_Options.Register_Option"
+                        param="table[
+            $id        = 'drjele_black_market_interact',
+            $category  = 'Black Market Leads',
+            $name      = 'Right-click entry on stations',
+            $mouseover = 'Adds a Black Market Leads entry to the interaction menu of a known station that has a marketeer aboard.',
+            $type      = 'button',
+            $default   = 1,
+            $callback  = OnInteractChanged,
+            ]"/>
+                <signal_cue_instantly
+                        cue="md.Simple_Menu_Options.Register_Option"
+                        param="table[
+            $id        = 'drjele_black_market_debug',
+            $category  = 'Black Market Leads',
+            $name      = 'Write decisions to the debug log',
+            $mouseover = 'Logs every station the mod looked at and why it did or did not plant a lead. Needs the game started with -debug scripts.',
+            $type      = 'button',
+            $default   = 0,
+            $callback  = OnDebugChanged,
+            ]"/>
+            </actions>
+        </cue>
+
+        <cue name="OnForceLeaksChanged" instantiate="true">
+            <conditions>
+                <event_cue_signalled/>
+            </conditions>
+            <actions>
+                <set_value name="global.$DrJeleBlackMarketForceLeaks" exact="if event.param.$value then 1 else 0"/>
+            </actions>
+        </cue>
+
+        <cue name="OnForceCooldownChanged" instantiate="true">
+            <conditions>
+                <event_cue_signalled/>
+            </conditions>
+            <actions>
+                <set_value name="global.$DrJeleBlackMarketForceCooldown" exact="[event.param.$value, 5].max * 1min"/>
+            </actions>
+        </cue>
+
+        <cue name="OnLogbookChanged" instantiate="true">
+            <conditions>
+                <event_cue_signalled/>
+            </conditions>
+            <actions>
+                <set_value name="global.$DrJeleBlackMarketLogbook" exact="if event.param.$value then 1 else 0"/>
+            </actions>
+        </cue>
+
+        <cue name="OnNotifyChanged" instantiate="true">
+            <conditions>
+                <event_cue_signalled/>
+            </conditions>
+            <actions>
+                <set_value name="global.$DrJeleBlackMarketNotify" exact="if event.param.$value then 1 else 0"/>
+            </actions>
+        </cue>
+
+        <cue name="OnListLockedChanged" instantiate="true">
+            <conditions>
+                <event_cue_signalled/>
+            </conditions>
+            <actions>
+                <set_value name="global.$DrJeleBlackMarketListLocked" exact="if event.param.$value then 1 else 0"/>
+            </actions>
+        </cue>
+
+        <cue name="OnListUnlockedChanged" instantiate="true">
+            <conditions>
+                <event_cue_signalled/>
+            </conditions>
+            <actions>
+                <set_value name="global.$DrJeleBlackMarketListUnlocked" exact="if event.param.$value then 1 else 0"/>
+            </actions>
+        </cue>
+
+        <cue name="OnInteractChanged" instantiate="true">
+            <conditions>
+                <event_cue_signalled/>
+            </conditions>
+            <actions>
+                <set_value name="global.$DrJeleBlackMarketInteract" exact="if event.param.$value then 1 else 0"/>
+            </actions>
+        </cue>
+
+        <cue name="OnDebugChanged" instantiate="true">
+            <conditions>
+                <event_cue_signalled/>
+            </conditions>
+            <actions>
+                <set_value name="global.$DrJeleBlackMarketDebugChance" exact="if event.param.$value then 100 else 0"/>
+            </actions>
+        </cue>
+
+    </cues>
+</mdscript>

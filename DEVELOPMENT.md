@@ -1,0 +1,102 @@
+# Development
+
+## Checks and formatting
+
+Use Python 3.10 or newer and Bash. Install the pinned tools in a virtual environment:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt
+export PATH="$PWD/.venv/bin:$PATH"
+python3 scripts/check.py
+```
+
+Run `python3 scripts/check.py --fix` to format Python and shell and normalize text whitespace. The same checks run on pushes and pull requests. XML is checked for well-formedness; game schemas, XPath matches and gameplay require separate X4 validation. Blender scripts are parsed and linted without importing Blender.
+
+Use UTF-8, LF, a final newline, spaces and no trailing whitespace. Indent code with four spaces and workflow YAML with two. Use descriptive names, uppercase shell variables, constant-first equality comparisons and explicit boolean checks. Ruff's E712 rule is disabled to retain explicit boolean comparisons. Keep shell free of prose comments. Keep only short, non-obvious constraints in code; put explanations here. XML continuation attributes may align with their opening attribute. Preserve XPath selectors, savegame identifiers and embedded game expressions when applying formatting.
+
+## Installation and publishing helpers
+
+`install.sh` and `publish.sh` both source `lib/find_x4.sh`. The library searches usual Steam roots and additional library folders. `X4_PATH`, `X_TOOLS_PATH`
+and `PROTON_PATH` override discovery. Proton Experimental is preferred when found; otherwise the helper uses the last matching Proton directory it encounters.
+
+Installation replaces the extension directory with a copy of `extension/`. Refresh it after edits; X4 enumerates real extension directories, so a symlink does not substitute for installation. Restart the game after installing or removing.
+
+Publishing stages a separate copy inside the game's extensions directory. The repository keeps its readable extension id; `steam/workshop-id` holds the numeric Workshop id. The helper changes only the staged manifest, runs the interactive WorkshopTool and restores the manual installation after success. On Linux it runs WorkshopTool through Proton and maps paths through drive Z. A failed upload can leave the staged copy behind; rerun `./install.sh` to restore it.
+
+## Release metadata
+
+`content.xml` uses an integer version multiplied by 100 and an ISO release date. The date matches the corresponding released entry in `CHANGELOG.md`. Development changes belong under `Unreleased`; they do not advance the manifest's release version or date. An unreleased scaffold may retain its initial creation date until its first release. Keep existing extension ids stable.
+
+## Implementation constraints
+
+### extension/md/drjele_black_market_leads.xml
+
+The whole mod reads one vanilla global: `md.$ShadyGuyMap`, written by `md/npc_shadyguy.xml`, mapping each black marketeer NPC to the station he sits on. It is savegame state, maintained by vanilla on creation and on host-station destruction, so no scan of our own is needed. `md.NPC_ShadyGuy.GameStarted.$TrackedStationGroup` holds the same stations and is read cross-script by the DLCs, but the map carries the NPC as well and is therefore the better handle.
+
+Relevant properties: `station.shadyguy` (entity or null), `npc.isshadyguy`, `npc.tradesvisible` (true once the player has unlocked that dealer), `object.isknown`, `object.scannedlevel`.
+
+`Tick` walks only the player's current sector and only stations with `isknown`. That restriction is the point of the mod and is deliberately not a setting: a marketeer in an unvisited sector must stay as invisible as it is in vanilla.
+
+Vanilla unlock path, for reference. `md/signal_leaks.xml` cue `Manager.GenerateSignalLeaks` rolls leak counts in library `CalculateLeakCounts` and, for the first mission leak only, swaps in `$ShadyGuyMissionTable` when `$LeakObject.controlentity.{controlpost.shadyguy}` exists. That table has a single entry, `GM_BringItems__Trigger`, page 30135, text offsets 1000 and 1100 — the one-hour illegal-item delivery whose reward text is `{30135,106}` "Access to unsanctioned trade offers". On success `md/gm_bringitems.xml` runs `set_entity_traits tradesvisible="true"` and `unlock_achievement BLACK_MARKET`, and only then does `md/npc_instantiation.xml` cue `PlaceShadyGuy` move the character into a bar.
+
+`$MissionLeakCount` cannot roll zero: both `set_value` calls in `CalculateLeakCounts` use `min="1"`. A station yields nothing when it has no free leak slots, already carries `$MaxLeaks = 8` leaks, is owned by a faction in `$ExcludedMissionFactions`, or is covered by `$SuppressSignalLeakGeneration` or `md.GenericMissions.Manager.$ExcludedOfferObjects`. The tick mirrors every one of those guards before it signals anything.
+
+The docking check is the important one. `Manager.GM_BringItems__Trigger` requires `$Station.hasrelation.dock.{faction.player}`; without it the cue sets `$ReportCue.$SetupFailed` and cancels, `Mission_Report_Listener` resets `Mission_Selector`, and because `Mission_Selector` has already removed the only entry from the mission table the reset falls through to `MissionLeak_Cleanup`, which destroys the leak it just created. So on a station the player cannot dock at, the lead appears and vanishes and no amount of scanning helps. The mod never plants there, and the logbook entry and the list say why.
+
+`$CleanupTable` is checked, not cleared. An entry means vanilla intends to remove that station's leaks and `GenerateSignalLeaks` would take its early-abort branch, wasting the attempt; `Manager.PlayerChangesSpace` clears the entry itself once the station is in the player's new sector, so skipping and retrying next tick is correct.
+
+`$ForceMode` selects the hook. `'station'`, the default, signals `md.Signal_Leaks.Manager.GenerateSignalLeaks` with the station — the entire vanilla pass, which is why it is the verified option; the cost is a couple of unrelated data leaks. `'leak'` signals `md.Signal_Leaks.Manager.PlaceMissionLeakOnSurface` with a slot and a mission table holding only `GM_BringItems__Trigger`, placing exactly one lead and no noise. It is not the default because it uses a cue from another script as a computed table key, which vanilla never does — it only ever builds that table from inside `Manager`'s own namespace. Test it before promoting it.
+
+The leak census and the slot filter replicate `CalculateLeakCounts` and `GetLeakSlots` rather than referencing them. `include_actions ref="md.Signal_Leaks.GetLeakSlots"` would also overwrite a local `$LeakLocations`, and vanilla never calls either library across scripts.
+
+`State.$Attempts` and `State.$Announced` are tables keyed by station object, never variables written onto the component: X4 refuses `component.{...}.$var`, and a failed property lookup does not skip the enclosing `do_if`. `PruneState` iterates both in reverse because it mutates them while walking. Entries are dropped when the station is gone, when its marketeer has become `tradesvisible`, or after two hours without a sighting.
+
+`Tick` keeps an explicit `State.$NextTickTime` stamp; `checkinterval` does not throttle a cue that resets itself, and the child `Rearm` cue resets `Tick` one second after each pass.
+
+`Configuration` is `instantiate="true" namespace="static"`, so it writes plain `$var` and never `Configuration.$var` — self-qualifying inside such a cue sends the write to the running instance while other cues read the static one, silently.
+
+### extension/md/drjele_black_market_leads_menu.xml
+
+Everything here needs SirNukes Mod Support APIs, which is why it is a separate file: none of these cues can fire when the API is absent, and the mod's own behaviour is unaffected.
+
+`md.Simple_Menu_API.Reloaded` and `md.Simple_Menu_Options.Reloaded` are different cues. The menu registers against the first, the settings file against the second; crossing them registers nothing at all and reports no error.
+
+`Register_Options_Menu` gives the list its own line under Extension Options and calls `FillOptionsMenu` on open. `Create_Menu` must not be called from that cue — the frame already exists. The standalone menu, opened from the chat command, the interact menu and the hotkey, calls `Create_Menu` first. Both then run the `BuildLeadRows` library, which is the only place the table is built.
+
+`sort_list` has no "sort by element N" mode, so the rows are ordered by sorting a list of unique `sector|station|object` strings and looking the rows up in a table keyed by that string.
+
+The hotkey is registered but is not expected to work here. `md/hotkey_api.xml` receives keys only through the Named Pipes API, fed by an external Python server, and the SirNukes readme states that pipes are set up for Windows only. The game here is the native Linux build. Extension Options, `/leads` and the station right-click entry are the openers that work.
+
+`/leadsdebug` signals `md.NPC_ShadyGuy.GameStarted.ShadyGuy_DEBUG`, vanilla's own dump of the tracked station group and the whole marketeer map to the debug log. It is the fastest way to pick a test target.
+
+### extension/md/drjele_black_market_leads_options.xml
+
+Every callback does nothing but write a global that the main script reads through the usual three-level fallback, so a missing API, a missing global and a missing config table all degrade to the shipped default.
+
+An option's `$id` owns its stored value, its widget type and its range for good: SirNukes saves the value under the id and feeds it straight back as the widget's start value, so a range change under an existing id makes validation fail and closes the entire Extension Options menu, taking every other mod's settings with it. Hence `drjele_black_market_force_cooldown_min` carries its unit in the id.
+
+`Register_Option` invokes the callback once at registration with the stored value unless `$skip_initial_callback` is set. That is why no option here is an action button: an option that opened the menu would open it on every load.
+
+Option values live in `uidata.xml` at profile level, not in the savegame — `Simple_Menu_Options.Load_Userdata` reads them through `md.Userdata.Read` with owner `sn_mod_support_apis`. They are therefore shared by every save on the profile.
+
+## Verification
+
+Not yet run. Install, restart X4 — a brand-new mdscript is not picked up by `/refreshmd` — then iterate with `/rmd`. The active log on this machine is `~/snap/steam/common/.config/EgoSoft/X4/23682333/debuglog.txt`; `~/Documents/Egosoft/X4/23682333/` is a stale copy.
+
+1. `grep "drjele_black_market\|DrJele black market" debuglog.txt` must be free of `[=ERROR=]`.
+2. Turn on the debug option, run `/leadsdebug`, and pick a known, dockable, non-player/Xenon/Kha'ak station whose marketeer is still locked.
+3. Fly there. Expect the ticker line and a Tips logbook entry that opens the map on the station; about 45 seconds later a `planted a lead on ...` debug line; about 10 seconds after that a new signal leak on the hull.
+4. Scan it. The offer must be the one-hour illegal-item delivery. Completing it must flip the row in the list to `Unlocked` and drop the station from `State.$Attempts`.
+5. Negative tests: a station without docking permission shows `Locked - no docking permission` and is never planted on; a marketeer in an undiscovered sector appears nowhere.
+6. Leave and return inside the cooldown: exactly one lead, and the station's total leak count never passes `$MaxLeaksPerStation`.
+7. Save, reload, reopen the list: state survives and no duplicate logbook entries are written.
+8. Disable SirNukes and reload: logbook, ticker and lead planting must all still work.
+
+## Open questions
+
+- Whether `table[{md.Signal_Leaks.Manager.GM_BringItems__Trigger} = ...]` resolves a cross-script cue as a computed table key. This is the whole of `$ForceMode = 'leak'`; the default does not depend on it.
+- Whether the standalone `Create_Menu` opens cleanly from an interact menu callback while flying. The Extension Options submenu is the fallback.
+- Whether `Manager.PlaceMissionLeakOnSurface` behaves when signalled from outside `Manager`. It is `namespace="this"` and resolves `Manager.$Leaks` up its own static chain, which should make it independent of the signaller, but that is inference from the source rather than observation.
+- Whether `Make_Button`'s `$text` accepts a plain string or needs a TextProperty table.
+- `extension/preview.jpg` is still the placeholder copied from `x4-unique-ship-limits` and must be replaced before publishing.
