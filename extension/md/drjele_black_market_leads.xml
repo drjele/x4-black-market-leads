@@ -57,7 +57,7 @@
                 <!-- The only galaxy-wide pass. It happens once per sector change, and once on every savegame
                      load so that installing the mod without moving still fills the watch group. Same pair of
                      triggers vanilla uses in Signal_Leaks.Manager.PlayerChangesSpace. -->
-                <cue name="SectorArrived" instantiate="true" namespace="this">
+                <cue name="SectorPass" instantiate="true" namespace="this">
                     <conditions>
                         <check_any>
                             <event_cue_signalled cue="md.Setup.Start"/>
@@ -88,7 +88,7 @@
                                 <do_if value="$Station.isknown">
                                     <include_actions ref="ReportLead"/>
                                     <do_if value="$Station.attention ge attention.visible">
-                                        <signal_cue_instantly cue="Evaluate" param="$Station"/>
+                                        <signal_cue_instantly cue="PlantCheck" param="$Station"/>
                                     </do_if>
                                 </do_if>
                             </do_for_each>
@@ -102,7 +102,7 @@
                 <!-- No namespace: the group in the event condition has to resolve in the parent's namespace,
                      exactly like Signal_Leaks.Manager.ObjectChangedAttention. Action blocks run atomically,
                      so sharing $Station with the sibling below is safe. -->
-                <cue name="StationBecameKnown" instantiate="true">
+                <cue name="MarketeerKnown" instantiate="true">
                     <conditions>
                         <event_object_known_to_player group="$Watched"/>
                     </conditions>
@@ -110,13 +110,13 @@
                         <set_value name="$Station" exact="event.object"/>
                         <include_actions ref="ReportLead"/>
                         <do_if value="@$Station.attention ge attention.visible">
-                            <signal_cue_instantly cue="Evaluate" param="$Station"/>
+                            <signal_cue_instantly cue="PlantCheck" param="$Station"/>
                         </do_if>
                     </actions>
                 </cue>
 
                 <!-- Flying up to the station is the trigger; that is also the moment vanilla itself seeds leaks. -->
-                <cue name="StationApproached" instantiate="true">
+                <cue name="MarketeerApproached" instantiate="true">
                     <conditions>
                         <event_object_changed_attention group="$Watched"/>
                         <check_value value="event.param ge attention.visible and event.param2 lt attention.visible"/>
@@ -125,14 +125,14 @@
                         <set_value name="$Station" exact="event.object"/>
                         <do_if value="@$Station.isknown">
                             <include_actions ref="ReportLead"/>
-                            <signal_cue_instantly cue="Evaluate" param="$Station"/>
+                            <signal_cue_instantly cue="PlantCheck" param="$Station"/>
                         </do_if>
                     </actions>
                 </cue>
 
                 <!-- namespace="this" because instances overlap across the delay, and event.param is captured
                      before it: after a delay the event is no longer the current one. -->
-                <cue name="Evaluate" instantiate="true" namespace="this">
+                <cue name="PlantCheck" instantiate="true" namespace="this">
                     <conditions>
                         <event_cue_signalled/>
                     </conditions>
