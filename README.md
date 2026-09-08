@@ -115,16 +115,19 @@ The `/leadsdebug` chat command triggers the game's own dump of every black marke
 
 ## Status
 
-**Partly verified in game on 9.00**, on a 49-day save. What a run has shown so far:
+**Verified in game on 9.00**, on a 49-day save:
 
 | Check | Result |
 |---|---|
-| Sector pass | fires on arrival and on load, and reported 4 stations with a locked marketeer in one sector |
+| Sector pass | fires on arrival and on savegame load; reported 0, 2, 3 and 5 stations across four sectors |
 | Reporting | logbook entry and ticker line appear on entering the sector |
-| The lead is really there | one station's four mission leaks did contain the black market delivery — it was not the first leak scanned |
-| Script errors | none from this mod |
+| Watch group | attention events on it drive every later step; no polling |
+| Decoys | vanilla seeds a station to eight leaks with four mission leaks in one pass, and the mod clears them |
+| Single lead | after the clear, the black market delivery was found on the first mission leak scanned |
+| Version patch | the `sinceversion="2"` reset cleared stale bookkeeping on load, and the affected stations were reprocessed at once |
+| Script errors | none |
 
-What a run has **not** shown yet: the planting path actually firing. Every station tested was already at the vanilla cap of 8 leaks, so the mod correctly declined to add anything. Also untested: the menu rendering, the right-click entry, and completing the delivery through to `tradesvisible`.
+Not exercised yet: the `Plant a lead worth scanning` path with **Only the black market lead** turned off, and completing the delivery through to `tradesvisible`.
 
 All three scripts validate against `md/md.xsd` extracted from the 9.00 archives, with no errors. The mechanism itself is read straight out of the shipped files rather than inferred:
 
