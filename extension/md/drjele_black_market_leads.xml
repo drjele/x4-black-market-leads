@@ -9,6 +9,7 @@
             <actions>
                 <set_value name="$ForceMode" exact="'station'" comment="'station' runs the whole vanilla leak pass, 'leak' places a single black market lead - see DEVELOPMENT.md"/>
                 <set_value name="$ForceLeaks" exact="1" comment="1 plants a lead on a station whose marketeer is still locked"/>
+                <set_value name="$OnlyBlackMarketLead" exact="1" comment="1 clears the generic mission leaks off a marketeer station and leaves a single black market one, so the first mission leak found is the right one"/>
                 <set_value name="$ForceCooldown" exact="30min" comment="game time between two attempts on the same station"/>
                 <set_value name="$MaxAttemptsPerStation" exact="5" comment="give up on a station after this many attempts, until its marketeer unlocks"/>
                 <set_value name="$MaxLeaksPerStation" exact="6" comment="never push a station past this many signal leaks - the vanilla hard cap is 8"/>
@@ -23,6 +24,7 @@
                 <set_value name="global.$DrJeleBlackMarketLeadsConfig" exact="table[
                     $ForceMode             = $ForceMode,
                     $ForceLeaks            = $ForceLeaks,
+                    $OnlyBlackMarketLead   = $OnlyBlackMarketLead,
                     $ForceCooldown         = $ForceCooldown,
                     $MaxAttemptsPerStation = $MaxAttemptsPerStation,
                     $MaxLeaksPerStation    = $MaxLeaksPerStation,
@@ -161,6 +163,7 @@
                 <set_value name="$ForceLeaks" exact="if global.$DrJeleBlackMarketForceLeaks? then global.$DrJeleBlackMarketForceLeaks else (if $Config.$ForceLeaks? then $Config.$ForceLeaks else 1)"/>
                 <set_value name="$ForceCooldown" exact="if global.$DrJeleBlackMarketForceCooldown? then global.$DrJeleBlackMarketForceCooldown else (if $Config.$ForceCooldown? then $Config.$ForceCooldown else 30min)"/>
                 <set_value name="$ForceMode" exact="if $Config.$ForceMode? then $Config.$ForceMode else 'station'"/>
+                <set_value name="$OnlyLead" exact="if global.$DrJeleBlackMarketOnlyLead? then global.$DrJeleBlackMarketOnlyLead else (if $Config.$OnlyBlackMarketLead? then $Config.$OnlyBlackMarketLead else 1)"/>
                 <set_value name="$MaxAttempts" exact="if $Config.$MaxAttemptsPerStation? then $Config.$MaxAttemptsPerStation else 5"/>
                 <set_value name="$MaxLeaks" exact="if $Config.$MaxLeaksPerStation? then $Config.$MaxLeaksPerStation else 6"/>
                 <set_value name="$MaxVoiceLeaks" exact="if $Config.$MaxVoiceLeaks? then $Config.$MaxVoiceLeaks else 1"/>
@@ -228,6 +231,41 @@
                         <set_value name="$VoiceLeaks" operation="add"/>
                     </do_if>
                 </do_for_each>
+                <!-- Vanilla seeds a station up to eight leaks in one pass and only the first mission leak of
+                     that pass carries the black market table, so the player has to work through several
+                     generic ones. This clears the mission leaks off the hull and puts back exactly one,
+                     built from a table that holds nothing but the black market delivery. Data leaks are
+                     left alone, and an accepted mission has no leak any more, so only pending generic
+                     offers are lost. -->
+                <do_if value="1 == $OnlyLead">
+                    <do_all exact="$ExistingLeaks.count" counter="$LeakIndex" reverse="true">
+                        <do_if value="@$ExistingLeaks.{$LeakIndex}.exists and $ExistingLeaks.{$LeakIndex}.type == signalleaktype.voice">
+                            <destroy_object object="$ExistingLeaks.{$LeakIndex}"/>
+                        </do_if>
+                    </do_all>
+                    <find_signalleak_location name="$FreeSlots" container="$Station" excludefilled="true" multiple="true"/>
+                    <do_if value="not @$FreeSlots.count">
+                        <set_value name="$FreeSlots" exact="[]"/>
+                    </do_if>
+                    <do_all exact="$FreeSlots.count" counter="$SlotIndex" reverse="true">
+                        <do_if value="not $FreeSlots.{$SlotIndex}.component.isoperational">
+                            <remove_value name="$FreeSlots.{$SlotIndex}"/>
+                        </do_if>
+                    </do_all>
+                    <do_if value="not $FreeSlots.count">
+                        <debug_text text="'DrJele black market leads: no free leak slot left on %s after clearing'.[$Station.knownname]" chance="$DebugChance"/>
+                        <return/>
+                    </do_if>
+                    <run_actions ref="PlaceBlackMarketLead">
+                        <param name="Slot" value="$FreeSlots.random"/>
+                        <param name="Station" value="$Station"/>
+                    </run_actions>
+                    <set_value name="Watcher.$Attempts.{$Station}"
+                               exact="[player.age, (if @Watcher.$Attempts.{$Station} then Watcher.$Attempts.{$Station}.{2} else 0) + 1, player.age]"/>
+                    <debug_text text="'DrJele black market leads: cleared %s mission leak(s) off %s and placed a single black market lead'.[$VoiceLeaks, $Station.knownname]" chance="$DebugChance"/>
+                    <return/>
+                </do_if>
+
                 <!-- A mission leak is already sitting on the hull; vanilla put it there and it is the one to scan. -->
                 <do_if value="$VoiceLeaks ge $MaxVoiceLeaks or $ExistingLeaks.count ge $MaxLeaks">
                     <!-- controlentity is what Signal_Leaks.GenerateSignalLeaks tests before it swaps in the
@@ -253,14 +291,10 @@
                 </do_if>
 
                 <do_if value="$ForceMode == 'leak'">
-                    <signal_cue_instantly cue="md.Signal_Leaks.Manager.PlaceMissionLeakOnSurface"
-                                          param="[$Slots.random, table[{md.Signal_Leaks.Manager.GM_BringItems__Trigger} = table[
-                                              $MissionType = missiontype.deliver,
-                                              $Page        = 30135,
-                                              $TextOffset  = [1000, 1100],
-                                              $Station     = $Station,
-                                              $debugchance = 0,
-                                              ]]]"/>
+                    <run_actions ref="PlaceBlackMarketLead">
+                        <param name="Slot" value="$Slots.random"/>
+                        <param name="Station" value="$Station"/>
+                    </run_actions>
                 </do_if>
                 <do_else>
                     <!-- The vanilla pass: its first mission leak on a station with a marketeer is always the unlock one. -->
@@ -271,6 +305,25 @@
                            exact="[player.age, (if @Watcher.$Attempts.{$Station} then Watcher.$Attempts.{$Station}.{2} else 0) + 1, player.age]"/>
                 <debug_text text="'DrJele black market leads: planted a lead on %s (%s), attempt %s, mode %s'.[$Station.knownname, $Station.sector.knownname, Watcher.$Attempts.{$Station}.{2}, $ForceMode]"
                             chance="$DebugChance"/>
+            </actions>
+        </library>
+
+        <!-- Isolated in its own library: it is the one place that names a cue from another script as a
+             computed table key, which vanilla only ever does from inside its own namespace. -->
+        <library name="PlaceBlackMarketLead" purpose="run_actions">
+            <params>
+                <param name="Slot"/>
+                <param name="Station"/>
+            </params>
+            <actions>
+                <signal_cue_instantly cue="md.Signal_Leaks.Manager.PlaceMissionLeakOnSurface"
+                                      param="[$Slot, table[{md.Signal_Leaks.Manager.GM_BringItems__Trigger} = table[
+                                          $MissionType = missiontype.deliver,
+                                          $Page        = 30135,
+                                          $TextOffset  = [1000, 1100],
+                                          $Station     = $Station,
+                                          $debugchance = 0,
+                                          ]]]"/>
             </actions>
         </library>
 

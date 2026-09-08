@@ -134,3 +134,15 @@ Only the first mission leak of a pass gets the black market table, so a fully se
 Two consequences for the design. The planting path is a safety net, not the main feature: on any station the player has just arrived at, vanilla has already placed the lead and `PlantLead` correctly declines. And the reporting is the real product — which station, and how many mission leaks stand between the player and the lead.
 
 There is no way to point at the specific leak. `hasmissionoffer` is a cue property, not an object property, and no object property links a signal leak to the mission offer attached to it, so the mission behind a given leak cannot be read from MD.
+
+## The single lead mode
+
+`$OnlyBlackMarketLead`, option `drjele_black_market_only_lead`, on by default. It is the answer to the problem the first run in game exposed: the lead is there, but so are three decoys.
+
+`PlantLead` destroys every `signalleaktype.voice` leak on the station, then calls `PlaceBlackMarketLead` with one free slot. That library signals `md.Signal_Leaks.Manager.PlaceMissionLeakOnSurface` with `[$Slot, <table>]`, where the table holds a single entry keyed by `md.Signal_Leaks.Manager.GM_BringItems__Trigger`. `PlaceMissionLeakOnSurface` reads the slot from `event.param.{1}` and passes `event.param.{2}` straight to `MissionLeak`, whose `Mission_Selector` shuffles the table's keys and signals the first — with one entry the choice is forced.
+
+Destroying leaks is a supported operation, not a hack: `Manager.CleanupSignalLeaks` does exactly `destroy_object` over its own `$Leaks` group every time the player leaves a sector, pending offers included. Data leaks are deliberately left alone, and an accepted mission has already had its leak destroyed by `Mission_Report_Listener`, so nothing the player is actually running can be lost.
+
+The library is separate for containment. It is the one expression in the mod that names a cue from another script as a computed table key, something vanilla only ever does from inside `Manager`'s own namespace; if that turns out to be rejected, the failure is confined to this library and the `$ForceMode = 'station'` path still works.
+
+The per-station cooldown does the work of not re-clearing a hull the mod has already prepared: after a plant, `PlantLead` returns at the cooldown guard for the next thirty minutes.

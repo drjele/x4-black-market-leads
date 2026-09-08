@@ -31,7 +31,8 @@ Requires X4: Foundations 9.00. Works on an existing savegame; no new game needed
 
 - **Points at the station.** The first time a station you already know is revealed to carry a black marketeer, you get one logbook entry under **Tips**, and optionally a ticker line. Clicking the entry opens the map on that station.
 - **Makes the scan pay off.** When you fly up to such a station and its marketeer is still locked, the mod asks the vanilla signal leak manager to run a pass on it, so the unlock lead gets placed instead of maybe getting placed. If mission leaks are already on the hull the mod does nothing — the lead is among them.
-- **Tells you how many leaks you have to work through.** A busy station gets several mission leaks in one pass and only the first is the black market one, so the list says `4 mission leaks - the lead is one of them`. That is the difference between "this mod does not work" and "keep scanning, you are two leaks away".
+- **Leaves only the lead worth scanning.** The game seeds a station with several mission leaks at once and only the first one is the black market delivery, so you scan three decoys to find it. With **Only the black market lead** on — the default — the mod clears the mission leaks off a station that has a locked marketeer and puts back a single one that can only be the black market delivery. Data leaks are untouched, and a mission you have already accepted has no leak left, so only pending generic offers on that one station are lost.
+- **Tells you how many leaks are left to work through**, if you turn that off: the list then says `4 mission leaks - the lead is one of them`, which is the difference between "this mod does not work" and "keep scanning, you are two leaks away".
 - **Remembers.** A list of the marketeers on stations you know: sector, station, owner, and what is currently blocking each one.
 - **Costs nothing while you play.** No periodic scan. One pass over the game's marketeer table when you change sector, then plain events on the one or two stations in that sector that actually matter.
 
@@ -53,7 +54,9 @@ Everything hangs off `md.$ShadyGuyMap`, the game's own table of black marketeer 
 
 When you change sector, the mod walks that table once and collects the stations in your new sector whose marketeer is still locked — normally one. Those go into a small watch group. When one of them crosses to `attention.visible`, which is both the moment you are close enough to scan and the moment the game seeds its own leaks, the mod waits thirty seconds for the vanilla pass to finish and then looks at the station.
 
-If the station still has no mission leak, and it has free leak slots, and you may dock there, and its owner is not one the game excludes from missions, the mod signals `md.Signal_Leaks.Manager.GenerateSignalLeaks` for it. The first mission leak of any pass on a station that carries a marketeer is always the unlock delivery, so the pass produces the lead. A per-station cooldown, an attempt limit and a cap on total leaks keep the hull from filling up.
+With **Only the black market lead** on, the mod then destroys the mission leaks on the hull and asks `md.Signal_Leaks.Manager.PlaceMissionLeakOnSurface` for one more, handing it a mission table that contains nothing but the black market delivery. Whatever mission leak you find on that station afterwards is the right one.
+
+With it off, the mod only steps in when the station has no mission leak at all, and then signals `md.Signal_Leaks.Manager.GenerateSignalLeaks` — the first mission leak of any pass on a marketeer station is always the unlock delivery, so the pass produces the lead. Either way a per-station cooldown, an attempt limit and a cap on total leaks keep the hull from filling up.
 
 ## Where to change things
 
@@ -62,6 +65,7 @@ With SirNukes Mod Support APIs installed: **Options → Extension Options → Bl
 | Setting | Default | What it does |
 | --- | --- | --- |
 | Plant a lead worth scanning | on | Seeds the unlock lead on a known station whose marketeer is locked |
+| Only the black market lead | on | Clears the decoy mission leaks off such a station and leaves a single black market one |
 | Retry the same station after | 30 min | Cooldown before a second attempt on the same station |
 | Logbook entry for a new lead | on | One entry under Tips per station, clickable to the map |
 | Ticker line for a new lead | on | Also shows a short ticker message |
@@ -84,7 +88,7 @@ On Linux the hotkey backend needs a named pipe server that currently only exists
 ## Configuring without the menu
 
 Without SirNukes the mod still runs — logbook entries, ticker lines and lead planting all work off the constants at the top of `extension/md/drjele_black_market_leads.xml`, re-read on every savegame load, so editing one and reloading is enough. Any other mod or cheat menu can override them at runtime through `global.$DrJeleBlackMarketForceLeaks`,
-`$DrJeleBlackMarketForceCooldown`, `$DrJeleBlackMarketLogbook`, `$DrJeleBlackMarketNotify`,
+`$DrJeleBlackMarketOnlyLead`, `$DrJeleBlackMarketForceCooldown`, `$DrJeleBlackMarketLogbook`, `$DrJeleBlackMarketNotify`,
 `$DrJeleBlackMarketListLocked`, `$DrJeleBlackMarketListUnlocked`, `$DrJeleBlackMarketInteract` and `$DrJeleBlackMarketDebugChance`.
 
 Note that SirNukes option values live in `uidata.xml` next to your savegames, not in the savegame itself, so they are shared by every save on the profile.

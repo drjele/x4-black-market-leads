@@ -21,6 +21,17 @@
                 <signal_cue_instantly
                         cue="md.Simple_Menu_Options.Register_Option"
                         param="table[
+            $id        = 'drjele_black_market_only_lead',
+            $category  = 'Black Market Leads',
+            $name      = 'Only the black market lead',
+            $mouseover = 'The game seeds a station with several mission leaks at once and only the first one is the black market delivery, so you scan three decoys to find it. On clears the mission leaks off a station that has a locked marketeer and puts back a single one that can only be the black market delivery. Data leaks are untouched, and a mission you have already accepted has no leak left, so only pending generic offers on that one station are lost. Off leaves the hull exactly as the game left it.',
+            $type      = 'button',
+            $default   = 1,
+            $callback  = OnOnlyLeadChanged,
+            ]"/>
+                <signal_cue_instantly
+                        cue="md.Simple_Menu_Options.Register_Option"
+                        param="table[
             $id        = 'drjele_black_market_force_cooldown_min',
             $category  = 'Black Market Leads',
             $name      = 'Retry the same station after',
@@ -105,6 +116,15 @@
             </conditions>
             <actions>
                 <set_value name="global.$DrJeleBlackMarketForceLeaks" exact="if event.param.$value then 1 else 0"/>
+            </actions>
+        </cue>
+
+        <cue name="OnOnlyLeadChanged" instantiate="true">
+            <conditions>
+                <event_cue_signalled/>
+            </conditions>
+            <actions>
+                <set_value name="global.$DrJeleBlackMarketOnlyLead" exact="if event.param.$value then 1 else 0"/>
             </actions>
         </cue>
 
