@@ -30,7 +30,8 @@ Requires X4: Foundations 9.00. Works on an existing savegame; no new game needed
 ## What it does
 
 - **Points at the station.** The first time a station you already know is revealed to carry a black marketeer, you get one logbook entry under **Tips**, and optionally a ticker line. Clicking the entry opens the map on that station.
-- **Makes the scan pay off.** When you fly up to such a station and its marketeer is still locked, the mod asks the vanilla signal leak manager to run a pass on it, so the unlock lead gets placed instead of maybe getting placed. If a mission leak is already sitting on the hull the mod does nothing — that one is the lead to scan.
+- **Makes the scan pay off.** When you fly up to such a station and its marketeer is still locked, the mod asks the vanilla signal leak manager to run a pass on it, so the unlock lead gets placed instead of maybe getting placed. If mission leaks are already on the hull the mod does nothing — the lead is among them.
+- **Tells you how many leaks you have to work through.** A busy station gets several mission leaks in one pass and only the first is the black market one, so the list says `4 mission leaks - the lead is one of them`. That is the difference between "this mod does not work" and "keep scanning, you are two leaks away".
 - **Remembers.** A list of the marketeers on stations you know: sector, station, owner, and what is currently blocking each one.
 - **Costs nothing while you play.** No periodic scan. One pass over the game's marketeer table when you change sector, then plain events on the one or two stations in that sector that actually matter.
 
@@ -110,7 +111,18 @@ The `/leadsdebug` chat command triggers the game's own dump of every black marke
 
 ## Status
 
-**Not yet verified in game.** All three scripts validate against `md/md.xsd` extracted from the 9.00 archives, with no errors. The mechanism itself is read straight out of the shipped files rather than inferred:
+**Partly verified in game on 9.00**, on a 49-day save. What a run has shown so far:
+
+| Check | Result |
+|---|---|
+| Sector pass | fires on arrival and on load, and reported 4 stations with a locked marketeer in one sector |
+| Reporting | logbook entry and ticker line appear on entering the sector |
+| The lead is really there | one station's four mission leaks did contain the black market delivery — it was not the first leak scanned |
+| Script errors | none from this mod |
+
+What a run has **not** shown yet: the planting path actually firing. Every station tested was already at the vanilla cap of 8 leaks, so the mod correctly declined to add anything. Also untested: the menu rendering, the right-click entry, and completing the delivery through to `tradesvisible`.
+
+All three scripts validate against `md/md.xsd` extracted from the 9.00 archives, with no errors. The mechanism itself is read straight out of the shipped files rather than inferred:
 
 | Claim                                                            | Where it comes from                                                                                              |
 |------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|

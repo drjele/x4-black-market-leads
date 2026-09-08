@@ -230,7 +230,10 @@
                 </do_for_each>
                 <!-- A mission leak is already sitting on the hull; vanilla put it there and it is the one to scan. -->
                 <do_if value="$VoiceLeaks ge $MaxVoiceLeaks or $ExistingLeaks.count ge $MaxLeaks">
-                    <debug_text text="'DrJele black market leads: %s already carries %s leak(s), %s of them mission leaks - nothing to add'.[$Station.knownname, $ExistingLeaks.count, $VoiceLeaks]" chance="$DebugChance"/>
+                    <!-- controlentity is what Signal_Leaks.GenerateSignalLeaks tests before it swaps in the
+                         black market mission table, so it is logged here: null would mean no pass on this
+                         station can ever produce the unlock lead. -->
+                    <debug_text text="'DrJele black market leads: %s already carries %s leak(s), %s of them mission leaks - nothing to add. shadyguy=%s controlentity=%s locked=%s dockable=%s'.[$Station.knownname, $ExistingLeaks.count, $VoiceLeaks, $ShadyGuy.knownname, @$Station.controlentity.{controlpost.shadyguy}.knownname, not $ShadyGuy.tradesvisible, $Station.hasrelation.dock.{faction.player}]" chance="$DebugChance"/>
                     <return/>
                 </do_if>
 
@@ -279,7 +282,7 @@
                 <do_if value="1 == $ReportLogbook and @$Station.exists and not @Watcher.$Announced.{$Station}">
                     <set_value name="Watcher.$Announced.{$Station}" exact="player.age"/>
                     <do_if value="$Station.hasrelation.dock.{faction.player}">
-                        <set_value name="$ReportText" exact="'%s - %s. Scan the hull for a signal leak.'.[$Station.knownname, $Station.sector.knownname]"/>
+                        <set_value name="$ReportText" exact="'%s - %s. Scan the hull: the black market lead is one of its mission leaks.'.[$Station.knownname, $Station.sector.knownname]"/>
                     </do_if>
                     <do_else>
                         <set_value name="$ReportText" exact="'%s - %s. No docking permission, so this one cannot be unlocked yet.'.[$Station.knownname, $Station.sector.knownname]"/>

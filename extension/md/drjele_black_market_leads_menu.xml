@@ -178,22 +178,29 @@
                     <do_if value="not @$Leaks.count">
                         <set_value name="$Leaks" exact="[]"/>
                     </do_if>
-                    <set_value name="$HasVoiceLeak" exact="false"/>
+                    <set_value name="$VoiceLeaks" exact="0"/>
                     <do_for_each name="$Leak" in="$Leaks">
                         <do_if value="$Leak.type == signalleaktype.voice">
-                            <set_value name="$HasVoiceLeak" exact="true"/>
-                            <break/>
+                            <set_value name="$VoiceLeaks" operation="add"/>
                         </do_if>
                     </do_for_each>
 
                     <do_if value="$Unlocked">
                         <set_value name="$Status" exact="'Unlocked'"/>
                     </do_if>
-                    <do_elseif value="$HasVoiceLeak">
-                        <set_value name="$Status" exact="'Lead active - scan it'"/>
-                    </do_elseif>
                     <do_elseif value="not $Station.hasrelation.dock.{faction.player}">
                         <set_value name="$Status" exact="'Locked - no docking permission'"/>
+                    </do_elseif>
+                    <!-- The game makes the first mission leak of every pass on a marketeer station the
+                         black market one, so with mission leaks on the hull the lead is one of them. -->
+                    <do_elseif value="1 == $VoiceLeaks">
+                        <set_value name="$Status" exact="'Lead on the hull - scan it'"/>
+                    </do_elseif>
+                    <do_elseif value="$VoiceLeaks gt 1">
+                        <set_value name="$Status" exact="'%s mission leaks - the lead is one of them'.[$VoiceLeaks]"/>
+                    </do_elseif>
+                    <do_elseif value="$Leaks.count ge 8">
+                        <set_value name="$Status" exact="'Hull is full - leave the sector and return'"/>
                     </do_elseif>
                     <do_elseif value="@md.DrJele_BlackMarketLeads.Watcher.$Attempts.{$Station} and md.DrJele_BlackMarketLeads.Watcher.$Attempts.{$Station}.{2} ge $MaxAttempts">
                         <set_value name="$Status" exact="'Locked - no lead could be placed'"/>

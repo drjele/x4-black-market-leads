@@ -124,3 +124,13 @@ Three things the schema validated happily and the game rejected on the first loa
 `No texture found for icon name 'shadyguy'`. `libraries/icons.xml` defines both `shadyguy` and `npc_shadyguy`, but only the latter resolves as a UI texture; it is also the one `menu_map.lua` uses in the map legend.
 
 `Duplicate cue name <name> in MD script`, on loading a savegame that already knows an older version of the script. Cue names are unique per script, and a savegame stores the cue tree it was written with, so **moving an existing cue under a different parent collides with the copy the save still holds** — the whole subtree is then rejected and the mod goes silent. Re-parenting therefore means renaming: `SectorArrived`, `StationBecameKnown`, `StationApproached` and `Evaluate` became `SectorPass`, `MarketeerKnown`, `MarketeerApproached` and `PlantCheck` when they moved under `Watcher`. Once released, a cue in this script can be renamed but never re-parented under its old name.
+
+## What a station actually looks like in play
+
+Confirmed in game: arriving in a sector, vanilla immediately seeds each station up to the cap. Three stations in one sector each went to **8 leaks, 4 of them mission leaks, within 30 seconds of arrival**, which is `CalculateLeakCounts` rolling its maximum.
+
+Only the first mission leak of a pass gets the black market table, so a fully seeded station carries **one** black market lead and three generic ones. A player who scans two leaks and gets two transport missions has not hit a bug — the lead is still on the hull. This was verified: the delivery mission was found on a later leak of the same station.
+
+Two consequences for the design. The planting path is a safety net, not the main feature: on any station the player has just arrived at, vanilla has already placed the lead and `PlantLead` correctly declines. And the reporting is the real product — which station, and how many mission leaks stand between the player and the lead.
+
+There is no way to point at the specific leak. `hasmissionoffer` is a cue property, not an object property, and no object property links a signal leak to the mission offer attached to it, so the mission behind a given leak cannot be read from MD.
