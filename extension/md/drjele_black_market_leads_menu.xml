@@ -11,7 +11,7 @@
             <actions>
                 <signal_cue_instantly cue="md.Simple_Menu_API.Register_Options_Menu" param="table[
                     $id      = 'drjele_black_market_leads_menu',
-                    $title   = 'Black Market Leads',
+                    $title   = 'Black Market Leads - known stations',
                     $columns = 5,
                     $onOpen  = FillOptionsMenu,
                     ]"/>
@@ -81,7 +81,7 @@
             <actions>
                 <signal_cue_instantly cue="md.Simple_Menu_API.Create_Menu" param="table[
                     $id      = 'drjele_black_market_leads',
-                    $title   = 'Black Market Leads',
+                    $title   = 'Black Market Leads - known stations',
                     $columns = 5,
                     $width   = 900,
                     ]"/>
