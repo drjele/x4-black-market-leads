@@ -17,8 +17,6 @@
                 <set_value name="$MinFreeSlots" exact="2" comment="vanilla rolls its leak count against count/2, so a single free slot is not enough"/>
                 <set_value name="$Notify" exact="1" comment="1 shows a ticker line the first time a lead is spotted"/>
                 <set_value name="$Logbook" exact="1" comment="1 writes a logbook entry that opens the map on the station"/>
-                <set_value name="$ListLocked" exact="1" comment="1 lists still locked marketeers in the menu"/>
-                <set_value name="$ListUnlocked" exact="1" comment="1 lists already unlocked marketeers in the menu"/>
                 <set_value name="$DebugChance" exact="0" comment="100 writes every decision to the debug log"/>
 
                 <set_value name="global.$DrJeleBlackMarketLeadsConfig" exact="table[
@@ -32,8 +30,6 @@
                     $MinFreeSlots          = $MinFreeSlots,
                     $Notify                = $Notify,
                     $Logbook               = $Logbook,
-                    $ListLocked            = $ListLocked,
-                    $ListUnlocked          = $ListUnlocked,
                     $DebugChance           = $DebugChance,
                     ]"/>
 

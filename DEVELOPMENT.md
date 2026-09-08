@@ -68,23 +68,9 @@ The guards live in `PlantLead`, a `purpose="run_actions"` library, purely so the
 
 `Configuration` is `instantiate="true" namespace="static"`, so it writes plain `$var` and never `Configuration.$var` — self-qualifying inside such a cue sends the write to the running instance while other cues read the static one, silently.
 
-### extension/md/drjele_black_market_leads_menu.xml
-
-Everything here needs SirNukes Mod Support APIs, which is why it is a separate file: none of these cues can fire when the API is absent, and the mod's own behaviour is unaffected.
-
-`md.Simple_Menu_API.Reloaded` and `md.Simple_Menu_Options.Reloaded` are different cues. The menu registers against the first, the settings file against the second; crossing them registers nothing at all and reports no error.
-
-`Register_Options_Menu` gives the list its own line under Extension Options and calls `FillOptionsMenu` on open. `Create_Menu` must not be called from that cue — the frame already exists. The standalone menu, opened from the chat command, the interact menu and the hotkey, calls `Create_Menu` first. Both then run the `BuildLeadRows` library, which is the only place the table is built.
-
-`sort_list` has no "sort by element N" mode, so the rows are ordered by sorting a list of unique `sector|station|object` strings and looking the rows up in a table keyed by that string.
-
-The hotkey is registered but is not expected to work here. `md/hotkey_api.xml` receives keys only through the Named Pipes API, fed by an external Python server, and the SirNukes readme states that pipes are set up for Windows only. The game here is the native Linux build. Extension Options, `/leads` and the station right-click entry are the openers that work.
-
-`/leadsdebug` signals `md.NPC_ShadyGuy.GameStarted.ShadyGuy_DEBUG`, vanilla's own dump of the tracked station group and the whole marketeer map to the debug log. It is the fastest way to pick a test target.
-
 ### extension/md/drjele_black_market_leads_options.xml
 
-Every callback does nothing but write a global that the main script reads through the usual three-level fallback, so a missing API, a missing global and a missing config table all degrade to the shipped default.
+Every callback does nothing but write a global that the main script reads through the usual three-level fallback, so a missing API, a missing global and a missing config table all degrade to the shipped default. This is the only file that needs SirNukes, and the mod's behaviour is identical without it.
 
 An option's `$id` owns its stored value, its widget type and its range for good: SirNukes saves the value under the id and feeds it straight back as the widget's start value, so a range change under an existing id makes validation fail and closes the entire Extension Options menu, taking every other mod's settings with it. Hence `drjele_black_market_force_cooldown_min` carries its unit in the id.
 
@@ -166,3 +152,11 @@ Sorting went the same way. There is no "sort by element N" in `sort_list`, which
 ## Register_Options_Menu needs $enabled
 
 The list menu registered cleanly — `RegisterMenu` fires, the command is sent, nothing is logged as wrong — and still no row appeared under Extension Options. `ui/simple_menu/options_menu.lua` only draws a registered submenu when `if not spec.private and spec.enabled then`, and nothing fills a default for `enabled`, so leaving it out means `nil`, which is false. The MD documentation says "Bool, true to enable the menu (default)"; the default does not exist. Pass `$enabled = true` explicitly.
+
+## The list that was removed
+
+A second script, `drjele_black_market_leads_menu.xml`, registered a table of known marketeer stations through the Simple Menu API — reachable from its own Extension Options entry, from `/leads` and `/leadsdebug` in the chat window, from a bindable hotkey and from the station's right-click menu, with a `Locate` button per row that wrote a logbook entry pointing at the map.
+
+It worked, and it was removed anyway. In play the logbook entry says everything the list did, at the moment it matters, without opening a menu; and the right-click entry could not open the standalone menu without dropping the player out of the map. Everything it taught is recorded above and in the two trap sections below — the string keyed table, and `Register_Options_Menu` needing an explicit `$enabled`. `git show ae529f9:extension/md/drjele_black_market_leads_menu.xml` has the last working version.
+
+Dropping it also removed the three options that only fed it, and left the mod matching the shape of every sibling repo: one script with the behaviour, one with the settings.

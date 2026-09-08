@@ -16,10 +16,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Lead planting: when the player flies up to such a station and its marketeer is still locked, the
   mod asks the vanilla signal leak manager to run a pass on it, so the unlock lead is actually
   placed. Per-station cooldown, attempt limit and leak cap.
-- Black Market Leads menu through SirNukes Simple Menu API, listing the marketeers on stations the
-  player knows with sector, owner and status, reachable from Extension Options, the `/leads` chat
-  command, the station right-click menu and a bindable hotkey.
-- Eight settings in Extension Options, and the same values overridable at runtime through globals.
+- Single lead mode, on by default: the game seeds a station with several mission leaks at once and
+  only the first is the black market delivery, so the mod clears them and puts back one that can
+  only be the black market delivery.
+- Six settings in Extension Options, and the same values overridable at runtime through globals.
 
 ### Notes
 

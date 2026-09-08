@@ -66,39 +66,6 @@
                 <signal_cue_instantly
                         cue="md.Simple_Menu_Options.Register_Option"
                         param="table[
-            $id        = 'drjele_black_market_list_locked',
-            $category  = 'Black Market Leads',
-            $name      = 'List locked marketeers',
-            $mouseover = 'Show the ones you have not unlocked yet in the menu. Only ever stations you already know.',
-            $type      = 'button',
-            $default   = 1,
-            $callback  = OnListLockedChanged,
-            ]"/>
-                <signal_cue_instantly
-                        cue="md.Simple_Menu_Options.Register_Option"
-                        param="table[
-            $id        = 'drjele_black_market_list_unlocked',
-            $category  = 'Black Market Leads',
-            $name      = 'List unlocked marketeers',
-            $mouseover = 'Show the ones you have already unlocked in the menu, so you can find your way back to them.',
-            $type      = 'button',
-            $default   = 1,
-            $callback  = OnListUnlockedChanged,
-            ]"/>
-                <signal_cue_instantly
-                        cue="md.Simple_Menu_Options.Register_Option"
-                        param="table[
-            $id        = 'drjele_black_market_interact',
-            $category  = 'Black Market Leads',
-            $name      = 'Right-click entry on stations',
-            $mouseover = 'Adds a Black Market Leads entry to the interaction menu of a known station that has a marketeer aboard.',
-            $type      = 'button',
-            $default   = 1,
-            $callback  = OnInteractChanged,
-            ]"/>
-                <signal_cue_instantly
-                        cue="md.Simple_Menu_Options.Register_Option"
-                        param="table[
             $id        = 'drjele_black_market_debug',
             $category  = 'Black Market Leads',
             $name      = 'Write decisions to the debug log',
@@ -152,33 +119,6 @@
             </conditions>
             <actions>
                 <set_value name="global.$DrJeleBlackMarketNotify" exact="if event.param.$value then 1 else 0"/>
-            </actions>
-        </cue>
-
-        <cue name="OnListLockedChanged" instantiate="true">
-            <conditions>
-                <event_cue_signalled/>
-            </conditions>
-            <actions>
-                <set_value name="global.$DrJeleBlackMarketListLocked" exact="if event.param.$value then 1 else 0"/>
-            </actions>
-        </cue>
-
-        <cue name="OnListUnlockedChanged" instantiate="true">
-            <conditions>
-                <event_cue_signalled/>
-            </conditions>
-            <actions>
-                <set_value name="global.$DrJeleBlackMarketListUnlocked" exact="if event.param.$value then 1 else 0"/>
-            </actions>
-        </cue>
-
-        <cue name="OnInteractChanged" instantiate="true">
-            <conditions>
-                <event_cue_signalled/>
-            </conditions>
-            <actions>
-                <set_value name="global.$DrJeleBlackMarketInteract" exact="if event.param.$value then 1 else 0"/>
             </actions>
         </cue>
 

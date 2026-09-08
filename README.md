@@ -4,7 +4,7 @@
 
 Black marketeers are placed on about one station per sector when the game starts, and then hidden. They are not in the bar, not in the station's people list, and nothing on the map points at them — the game only moves the character into the bar once you have already unlocked him. The single way in is a signal leak on the station hull, and nothing tells you which station is worth scanning.
 
-This mod does not hand you the galaxy. It tells you which of the stations **you already know** has a marketeer aboard, makes sure that scanning that station actually produces the unlock lead, and keeps a list so you do not have to.
+This mod does not hand you the galaxy. It tells you which of the stations **you already know** has a marketeer aboard, and makes sure that scanning that station produces the unlock lead instead of three decoys.
 
 ## Install
 
@@ -32,8 +32,6 @@ Requires X4: Foundations 9.00. Works on an existing savegame; no new game needed
 - **Points at the station.** The first time a station you already know is revealed to carry a black marketeer, you get one logbook entry under **Tips**, and optionally a ticker line. Clicking the entry opens the map on that station.
 - **Makes the scan pay off.** When you fly up to such a station and its marketeer is still locked, the mod asks the vanilla signal leak manager to run a pass on it, so the unlock lead gets placed instead of maybe getting placed. If mission leaks are already on the hull the mod does nothing — the lead is among them.
 - **Leaves only the lead worth scanning.** The game seeds a station with several mission leaks at once and only the first one is the black market delivery, so you scan three decoys to find it. With **Only the black market lead** on — the default — the mod clears the mission leaks off a station that has a locked marketeer and puts back a single one that can only be the black market delivery. Data leaks are untouched, and a mission you have already accepted has no leak left, so only pending generic offers on that one station are lost.
-- **Tells you how many leaks are left to work through**, if you turn that off: the list then says `4 mission leaks - the lead is one of them`, which is the difference between "this mod does not work" and "keep scanning, you are two leaks away".
-- **Remembers.** A list of the marketeers on stations you know: sector, station, owner, and what is currently blocking each one.
 - **Costs nothing while you play.** No periodic scan. One pass over the game's marketeer table when you change sector, then plain events on the one or two stations in that sector that actually matter.
 
 ## What it deliberately does not do
@@ -46,7 +44,7 @@ Only stations the game already considers known to you are ever reported, listed 
 
 The vanilla unlock mission checks `hasrelation.dock.{faction.player}`. If that fails it reports a setup failure; the leak's mission table has already been emptied by then, so the retry falls through to cleanup and the leak that was just created is destroyed a moment later. That is the real reason some stations never reward scanning, however long you spend on them.
 
-The mod never wastes a lead on such a station, and says so in the logbook entry and in the list.
+The mod never wastes a lead on such a station, and the logbook entry says so.
 
 ## How it works
 
@@ -69,27 +67,12 @@ With SirNukes Mod Support APIs installed: **Options → Extension Options → Bl
 | Retry the same station after | 30 min | Cooldown before a second attempt on the same station |
 | Logbook entry for a new lead | on | One entry under Tips per station, clickable to the map |
 | Ticker line for a new lead | on | Also shows a short ticker message |
-| List locked marketeers | on | Show the ones not yet unlocked |
-| List unlocked marketeers | on | Show the ones already unlocked |
-| Right-click entry on stations | on | Adds the list to a station's interaction menu |
 | Write decisions to the debug log | off | Needs the game started with `-debug scripts` |
 
-## Opening the list
-
-Four ways, all showing the same list:
-
-- **Options → Extension Options → Black Market Leads**
-- the **`/leads`** chat command
-- the right-click menu of a station that has a marketeer aboard
-- a hotkey, bindable under the SirNukes hotkey options
-
-On Linux the hotkey backend needs a named pipe server that currently only exists for Windows, so use one of the other three there.
-
-## Configuring without the menu
+## Configuring without the settings menu
 
 Without SirNukes the mod still runs — logbook entries, ticker lines and lead planting all work off the constants at the top of `extension/md/drjele_black_market_leads.xml`, re-read on every savegame load, so editing one and reloading is enough. Any other mod or cheat menu can override them at runtime through `global.$DrJeleBlackMarketForceLeaks`,
-`$DrJeleBlackMarketOnlyLead`, `$DrJeleBlackMarketForceCooldown`, `$DrJeleBlackMarketLogbook`, `$DrJeleBlackMarketNotify`,
-`$DrJeleBlackMarketListLocked`, `$DrJeleBlackMarketListUnlocked`, `$DrJeleBlackMarketInteract` and `$DrJeleBlackMarketDebugChance`.
+`$DrJeleBlackMarketOnlyLead`, `$DrJeleBlackMarketForceCooldown`, `$DrJeleBlackMarketLogbook`, `$DrJeleBlackMarketNotify` and `$DrJeleBlackMarketDebugChance`.
 
 Note that SirNukes option values live in `uidata.xml` next to your savegames, not in the savegame itself, so they are shared by every save on the profile.
 
@@ -111,8 +94,6 @@ DrJele black market leads: planted a lead on Trading Station Argon Prime, attemp
 DrJele black market leads: Wharf Argon Prime already carries 3 leak(s), 1 of them mission leaks - nothing to add
 ```
 
-The `/leadsdebug` chat command triggers the game's own dump of every black marketeer and the station it sits on, which is the fastest way to pick something to test against.
-
 ## Status
 
 **Verified in game on 9.00**, on a 49-day save:
@@ -128,6 +109,8 @@ The `/leadsdebug` chat command triggers the game's own dump of every black marke
 | Script errors | none |
 
 Not exercised yet: the `Plant a lead worth scanning` path with **Only the black market lead** turned off, and completing the delivery through to `tradesvisible`.
+
+There is deliberately no in-game list. One was built — a table of known marketeer stations, reachable from Extension Options, a chat command, a hotkey and the station's right-click menu — and then removed, because in play the logbook entry already says everything the list did.
 
 All three scripts validate against `md/md.xsd` extracted from the 9.00 archives, with no errors. The mechanism itself is read straight out of the shipped files rather than inferred:
 
