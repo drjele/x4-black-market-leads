@@ -46,7 +46,7 @@
              exist yet when the events are set up, which is what "Evaluated value 'null' is not of type
              group" means. Vanilla keeps groups and their listeners together the same way, in
              Signal_Leaks.Manager and NPC_ShadyGuy.GameStarted. -->
-        <cue name="Watcher" version="1">
+        <cue name="Watcher" version="2">
             <actions>
                 <set_value name="$Attempts" exact="table[]" comment="{$station} = [last attempt, attempts, last seen]"/>
                 <set_value name="$Announced" exact="table[]" comment="{$station} = when the lead was first reported"/>
@@ -54,6 +54,14 @@
                      Everything the mod does hangs off events on this handful of objects, so there is no polling. -->
                 <create_group groupname="$Watched"/>
             </actions>
+            <!-- Version 1 recorded attempts for plants that never happened, because the cue reference in
+                 PlaceBlackMarketLead did not resolve. Those entries would hold the affected stations on
+                 cooldown for half an hour after the fix, so the bookkeeping starts over. -->
+            <patch sinceversion="2">
+                <set_value name="$Attempts" exact="table[]"/>
+                <set_value name="$Announced" exact="table[]"/>
+                <debug_text text="'DrJele black market leads: attempt bookkeeping reset by patch'" filter="savegame"/>
+            </patch>
             <cues>
 
                 <!-- The only galaxy-wide pass. It happens once per sector change, and once on every savegame
@@ -262,7 +270,7 @@
                     </run_actions>
                     <set_value name="Watcher.$Attempts.{$Station}"
                                exact="[player.age, (if @Watcher.$Attempts.{$Station} then Watcher.$Attempts.{$Station}.{2} else 0) + 1, player.age]"/>
-                    <debug_text text="'DrJele black market leads: cleared %s mission leak(s) off %s and placed a single black market lead'.[$VoiceLeaks, $Station.knownname]" chance="$DebugChance"/>
+                    <debug_text text="'DrJele black market leads: cleared %s mission leak(s) off %s, requested a single black market lead'.[$VoiceLeaks, $Station.knownname]" chance="$DebugChance"/>
                     <return/>
                 </do_if>
 
