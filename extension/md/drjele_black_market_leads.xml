@@ -50,12 +50,18 @@
             </actions>
         </cue>
 
-        <!-- The only galaxy-wide pass, and it happens once per sector change. -->
+        <!-- The only galaxy-wide pass. It happens once per sector change, and once on every savegame
+             load so that installing the mod without moving still fills the watch group. Same pair of
+             triggers vanilla uses in Signal_Leaks.Manager.PlayerChangesSpace. -->
         <cue name="SectorArrived" instantiate="true" namespace="this">
             <conditions>
-                <event_object_changed_sector object="player.entity"/>
+                <check_any>
+                    <event_cue_signalled cue="md.Setup.Start"/>
+                    <event_object_changed_sector object="player.entity"/>
+                </check_any>
                 <check_value value="macro.xu_ep2_universe_macro == player.galaxy.macro" comment="main galaxy only - leaves Timelines scenarios, tutorials and the workshop untouched"/>
             </conditions>
+            <delay exact="2s" comment="on a load the player entity and the marketeer table settle a moment after Setup.Start"/>
             <actions>
                 <clear_group group="State.$Watched"/>
                 <include_actions ref="PruneState"/>
