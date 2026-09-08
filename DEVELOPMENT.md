@@ -58,7 +58,7 @@ The docking check is the important one. `Manager.GM_BringItems__Trigger` require
 
 `$ForceMode` selects the hook. `'station'`, the default, signals `md.Signal_Leaks.Manager.GenerateSignalLeaks` with the station — the entire vanilla pass, which is why it is the verified option; the cost is a couple of unrelated data leaks. `'leak'` signals `md.Signal_Leaks.Manager.PlaceMissionLeakOnSurface` with a slot and a mission table holding only `GM_BringItems__Trigger`, placing exactly one lead and no noise. It is not the default because it uses a cue from another script as a computed table key, which vanilla never does — it only ever builds that table from inside `Manager`'s own namespace. Test it before promoting it.
 
-The leak census and the slot filter replicate `CalculateLeakCounts` and `GetLeakSlots` rather than referencing them. `include_actions ref="md.Signal_Leaks.GetLeakSlots"` would also overwrite a local `$LeakLocations`, and vanilla never calls either library across scripts.
+The leak census and the slot filter replicate `CalculateLeakCounts` and `GetLeakSlots` rather than referencing them, because `include_actions ref="md.Signal_Leaks.GetLeakSlots"` writes its result into a `$LeakLocations` in the caller's own namespace. Calling them across scripts would otherwise be fine — `gm_repairsignalleaks.xml`, `story_split.xml` and `story_terraforming.xml` all do.
 
 `State.$Attempts` and `State.$Announced` are tables keyed by station object, never variables written onto the component: X4 refuses `component.{...}.$var`, and a failed property lookup does not skip the enclosing `do_if`. `PruneState` iterates both in reverse because it mutates them while walking. Entries are dropped when the station is gone, when its marketeer has become `tradesvisible`, or after two hours without a sighting.
 
@@ -146,3 +146,11 @@ Destroying leaks is a supported operation, not a hack: `Manager.CleanupSignalLea
 The library is separate for containment. It is the one expression in the mod that names a cue from another script as a computed table key, something vanilla only ever does from inside `Manager`'s own namespace; if that turns out to be rejected, the failure is confined to this library and the `$ForceMode = 'station'` path still works.
 
 The per-station cooldown does the work of not re-clearing a hull the mod has already prepared: after a plant, `PlantLead` returns at the cooldown guard for the next thirty minutes.
+
+## Cross-script cue references are flat
+
+`md.Signal_Leaks.Manager.PlaceMissionLeakOnSurface` does not resolve, and fails at runtime with `Property lookup failed` followed by `Evaluated value 'null' is not of type cue`. Cue names are unique per script — that is the same rule behind the `Duplicate cue name` error — so a cue is addressed as `md.<script>.<cue>` no matter how deeply it is nested. There is not a single `cue="md.X.Y.Z"` in the shipped scripts, and every DLC signals `md.NPC_ShadyGuy.EvaluateSectors` and `md.NPC_ShadyGuy.AddShadyGuys`, both of which are children of `GameStarted`.
+
+Variables are different, because they hang off a named cue: `md.Signal_Leaks.Manager.$CleanupTable` and `md.GenericMissions.Manager.$Disabled` are correct, and vanilla writes the second one verbatim. The shape is `md.<script>.<cue>.$var`, with the same flat cue name.
+
+The dangerous half is that a wrong cue path guarded by `@` evaluates to null in silence, so the guard simply never fires. Only an unguarded reference, like the `signal_cue_instantly` that exposed this one, reports anything.

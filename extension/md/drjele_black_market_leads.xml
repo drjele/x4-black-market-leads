@@ -298,7 +298,7 @@
                 </do_if>
                 <do_else>
                     <!-- The vanilla pass: its first mission leak on a station with a marketeer is always the unlock one. -->
-                    <signal_cue_instantly cue="md.Signal_Leaks.Manager.GenerateSignalLeaks" param="$Station"/>
+                    <signal_cue_instantly cue="md.Signal_Leaks.GenerateSignalLeaks" param="$Station"/>
                 </do_else>
 
                 <set_value name="Watcher.$Attempts.{$Station}"
@@ -316,8 +316,8 @@
                 <param name="Station"/>
             </params>
             <actions>
-                <signal_cue_instantly cue="md.Signal_Leaks.Manager.PlaceMissionLeakOnSurface"
-                                      param="[$Slot, table[{md.Signal_Leaks.Manager.GM_BringItems__Trigger} = table[
+                <signal_cue_instantly cue="md.Signal_Leaks.PlaceMissionLeakOnSurface"
+                                      param="[$Slot, table[{md.Signal_Leaks.GM_BringItems__Trigger} = table[
                                           $MissionType = missiontype.deliver,
                                           $Page        = 30135,
                                           $TextOffset  = [1000, 1100],

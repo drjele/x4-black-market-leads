@@ -104,7 +104,7 @@
                 <event_cue_signalled/>
             </conditions>
             <actions>
-                <signal_cue_instantly cue="md.NPC_ShadyGuy.GameStarted.ShadyGuy_DEBUG"/>
+                <signal_cue_instantly cue="md.NPC_ShadyGuy.ShadyGuy_DEBUG"/>
             </actions>
         </cue>
 
