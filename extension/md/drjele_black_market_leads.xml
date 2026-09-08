@@ -40,7 +40,11 @@
             </actions>
         </cue>
 
-        <cue name="State" version="1">
+        <!-- State and the cues that listen on it have to be one cue tree: a sibling cue's group does not
+             exist yet when the events are set up, which is what "Evaluated value 'null' is not of type
+             group" means. Vanilla keeps groups and their listeners together the same way, in
+             Signal_Leaks.Manager and NPC_ShadyGuy.GameStarted. -->
+        <cue name="Watcher" version="1">
             <actions>
                 <set_value name="$Attempts" exact="table[]" comment="{$station} = [last attempt, attempts, last seen]"/>
                 <set_value name="$Announced" exact="table[]" comment="{$station} = when the lead was first reported"/>
@@ -48,95 +52,102 @@
                      Everything the mod does hangs off events on this handful of objects, so there is no polling. -->
                 <create_group groupname="$Watched"/>
             </actions>
-        </cue>
+            <cues>
 
-        <!-- The only galaxy-wide pass. It happens once per sector change, and once on every savegame
-             load so that installing the mod without moving still fills the watch group. Same pair of
-             triggers vanilla uses in Signal_Leaks.Manager.PlayerChangesSpace. -->
-        <cue name="SectorArrived" instantiate="true" namespace="this">
-            <conditions>
-                <check_any>
-                    <event_cue_signalled cue="md.Setup.Start"/>
-                    <event_object_changed_sector object="player.entity"/>
-                </check_any>
-                <check_value value="macro.xu_ep2_universe_macro == player.galaxy.macro" comment="main galaxy only - leaves Timelines scenarios, tutorials and the workshop untouched"/>
-            </conditions>
-            <delay exact="2s" comment="on a load the player entity and the marketeer table settle a moment after Setup.Start"/>
-            <actions>
-                <clear_group group="State.$Watched"/>
-                <include_actions ref="PruneState"/>
+                <!-- The only galaxy-wide pass. It happens once per sector change, and once on every savegame
+                     load so that installing the mod without moving still fills the watch group. Same pair of
+                     triggers vanilla uses in Signal_Leaks.Manager.PlayerChangesSpace. -->
+                <cue name="SectorArrived" instantiate="true" namespace="this">
+                    <conditions>
+                        <check_any>
+                            <event_cue_signalled cue="md.Setup.Start"/>
+                            <event_object_changed_sector object="player.entity"/>
+                        </check_any>
+                        <check_value value="macro.xu_ep2_universe_macro == player.galaxy.macro" comment="main galaxy only - leaves Timelines scenarios, tutorials and the workshop untouched"/>
+                    </conditions>
+                    <delay exact="2s" comment="on a load the player entity and the marketeer table settle a moment after Setup.Start"/>
+                    <actions>
+                        <clear_group group="Watcher.$Watched"/>
+                        <include_actions ref="PruneState"/>
 
-                <do_if value="player.sector and md.$ShadyGuyMap?">
-                    <do_for_each name="$ShadyGuy" valuename="$Station" in="md.$ShadyGuyMap">
-                        <do_if value="not @$Station.exists or not $Station.isclass.station">
-                            <continue/>
+                        <do_if value="player.sector and md.$ShadyGuyMap?">
+                            <do_for_each name="$ShadyGuy" valuename="$Station" in="md.$ShadyGuyMap">
+                                <do_if value="not @$Station.exists or not $Station.isclass.station">
+                                    <continue/>
+                                </do_if>
+                                <do_if value="$Station.sector != player.sector">
+                                    <continue/>
+                                </do_if>
+                                <do_if value="not @$ShadyGuy.exists or $ShadyGuy.tradesvisible">
+                                    <continue/>
+                                </do_if>
+
+                                <!-- Watched before the isknown check, so a station discovered later in this sector still fires. -->
+                                <add_to_group groupname="Watcher.$Watched" object="$Station"/>
+
+                                <do_if value="$Station.isknown">
+                                    <include_actions ref="ReportLead"/>
+                                    <do_if value="$Station.attention ge attention.visible">
+                                        <signal_cue_instantly cue="Evaluate" param="$Station"/>
+                                    </do_if>
+                                </do_if>
+                            </do_for_each>
                         </do_if>
-                        <do_if value="$Station.sector != player.sector">
-                            <continue/>
-                        </do_if>
-                        <do_if value="not @$ShadyGuy.exists or $ShadyGuy.tradesvisible">
-                            <continue/>
-                        </do_if>
 
-                        <!-- Watched before the isknown check, so a station discovered later in this sector still fires. -->
-                        <add_to_group groupname="State.$Watched" object="$Station"/>
+                        <debug_text text="'DrJele black market leads: %s watched station(s) in %s'.[Watcher.$Watched.count, @player.sector.knownname]"
+                                    chance="if global.$DrJeleBlackMarketDebugChance? then global.$DrJeleBlackMarketDebugChance else 0"/>
+                    </actions>
+                </cue>
 
-                        <do_if value="$Station.isknown">
+                <!-- No namespace: the group in the event condition has to resolve in the parent's namespace,
+                     exactly like Signal_Leaks.Manager.ObjectChangedAttention. Action blocks run atomically,
+                     so sharing $Station with the sibling below is safe. -->
+                <cue name="StationBecameKnown" instantiate="true">
+                    <conditions>
+                        <event_object_known_to_player group="$Watched"/>
+                    </conditions>
+                    <actions>
+                        <set_value name="$Station" exact="event.object"/>
+                        <include_actions ref="ReportLead"/>
+                        <do_if value="@$Station.attention ge attention.visible">
+                            <signal_cue_instantly cue="Evaluate" param="$Station"/>
+                        </do_if>
+                    </actions>
+                </cue>
+
+                <!-- Flying up to the station is the trigger; that is also the moment vanilla itself seeds leaks. -->
+                <cue name="StationApproached" instantiate="true">
+                    <conditions>
+                        <event_object_changed_attention group="$Watched"/>
+                        <check_value value="event.param ge attention.visible and event.param2 lt attention.visible"/>
+                    </conditions>
+                    <actions>
+                        <set_value name="$Station" exact="event.object"/>
+                        <do_if value="@$Station.isknown">
                             <include_actions ref="ReportLead"/>
-                            <do_if value="$Station.attention ge attention.visible">
-                                <signal_cue_instantly cue="Evaluate" param="$Station"/>
-                            </do_if>
+                            <signal_cue_instantly cue="Evaluate" param="$Station"/>
                         </do_if>
-                    </do_for_each>
-                </do_if>
+                    </actions>
+                </cue>
 
-                <debug_text text="'DrJele black market leads: %s watched station(s) in %s'.[State.$Watched.count, @player.sector.knownname]"
-                            chance="if global.$DrJeleBlackMarketDebugChance? then global.$DrJeleBlackMarketDebugChance else 0"/>
-            </actions>
-        </cue>
+                <!-- namespace="this" because instances overlap across the delay, and event.param is captured
+                     before it: after a delay the event is no longer the current one. -->
+                <cue name="Evaluate" instantiate="true" namespace="this">
+                    <conditions>
+                        <event_cue_signalled/>
+                    </conditions>
+                    <actions>
+                        <set_value name="$Station" exact="event.param"/>
+                    </actions>
+                    <delay exact="30s" comment="let the vanilla leak pass for this station finish first - PlaceMissionLeakOnSurface waits 5s and then retries up to ten times"/>
+                    <actions>
+                        <run_actions ref="PlantLead">
+                            <param name="Station" value="$Station"/>
+                        </run_actions>
+                    </actions>
+                </cue>
 
-        <cue name="StationBecameKnown" instantiate="true" namespace="this">
-            <conditions>
-                <event_object_known_to_player group="State.$Watched"/>
-            </conditions>
-            <actions>
-                <set_value name="$Station" exact="event.object"/>
-                <include_actions ref="ReportLead"/>
-                <do_if value="$Station.attention ge attention.visible">
-                    <signal_cue_instantly cue="Evaluate" param="$Station"/>
-                </do_if>
-            </actions>
-        </cue>
-
-        <!-- Flying up to the station is the trigger; that is also the moment vanilla itself seeds leaks. -->
-        <cue name="StationApproached" instantiate="true" namespace="this">
-            <conditions>
-                <event_object_changed_attention group="State.$Watched"/>
-                <check_value value="event.param ge attention.visible and event.param2 lt attention.visible"/>
-            </conditions>
-            <actions>
-                <set_value name="$Station" exact="event.object"/>
-                <do_if value="@$Station.isknown">
-                    <include_actions ref="ReportLead"/>
-                    <signal_cue_instantly cue="Evaluate" param="$Station"/>
-                </do_if>
-            </actions>
-        </cue>
-
-        <!-- event.param is captured before the delay; after a delay the event is no longer the current one. -->
-        <cue name="Evaluate" instantiate="true" namespace="this">
-            <conditions>
-                <event_cue_signalled/>
-            </conditions>
-            <actions>
-                <set_value name="$Station" exact="event.param"/>
-            </actions>
-            <delay exact="30s" comment="let the vanilla leak pass for this station finish first - PlaceMissionLeakOnSurface waits 5s and then retries up to ten times"/>
-            <actions>
-                <run_actions ref="PlantLead">
-                    <param name="Station" value="$Station"/>
-                </run_actions>
-            </actions>
+            </cues>
         </cue>
 
         <!-- purpose="run_actions" so the guards can bail out with <return/>, which a cue cannot do. -->
@@ -163,17 +174,21 @@
                 </do_if>
                 <set_value name="$ShadyGuy" exact="@$Station.shadyguy"/>
                 <do_if value="not $ShadyGuy">
+                    <debug_text text="'DrJele black market leads: %s has no marketeer any more'.[$Station.knownname]" chance="$DebugChance"/>
                     <return/>
                 </do_if>
                 <do_if value="$ShadyGuy.tradesvisible">
-                    <remove_from_group group="State.$Watched" object="$Station"/>
+                    <remove_from_group group="Watcher.$Watched" object="$Station"/>
+                    <debug_text text="'DrJele black market leads: %s is already unlocked'.[$Station.knownname]" chance="$DebugChance"/>
                     <return/>
                 </do_if>
                 <do_if value="$Station.attention lt attention.visible">
+                    <debug_text text="'DrJele black market leads: %s dropped out of attention again'.[$Station.knownname]" chance="$DebugChance"/>
                     <return/>
                 </do_if>
                 <!-- GM_BringItems__Trigger bails out without docking permission, and the leak it just made is destroyed again. -->
                 <do_if value="not $Station.hasrelation.dock.{faction.player}">
+                    <debug_text text="'DrJele black market leads: no docking permission at %s, a lead there would be destroyed again'.[$Station.knownname]" chance="$DebugChance"/>
                     <return/>
                 </do_if>
                 <do_if value="@md.GenericMissions.Manager.$Disabled">
@@ -183,19 +198,22 @@
                     <return/>
                 </do_if>
                 <do_if value="@md.Signal_Leaks.Manager.$ExcludedMissionFactions.indexof.{$Station.owner}">
+                    <debug_text text="'DrJele black market leads: %s is owned by %s, which the game excludes from mission leaks'.[$Station.knownname, $Station.owner.name]" chance="$DebugChance"/>
                     <return/>
                 </do_if>
                 <do_if value="@md.GenericMissions.Manager.$ExcludedOfferObjects.indexof.{$Station}">
                     <return/>
                 </do_if>
-                <!-- A queued cleanup makes GenerateSignalLeaks take its abort branch, which would burn the attempt. -->
-                <do_if value="@md.Signal_Leaks.Manager.$CleanupTable.{$Station}?">
+                <!-- A queued cleanup makes GenerateSignalLeaks take its abort branch, which would burn the
+                     attempt. Tested through keys.indexof because '@' cannot be combined with '?'. -->
+                <do_if value="@md.Signal_Leaks.Manager.$CleanupTable.keys.indexof.{$Station}">
+                    <debug_text text="'DrJele black market leads: the game has a leak cleanup queued for %s'.[$Station.knownname]" chance="$DebugChance"/>
                     <return/>
                 </do_if>
-                <do_if value="@State.$Attempts.{$Station} and (player.age - State.$Attempts.{$Station}.{1}) lt $ForceCooldown">
+                <do_if value="@Watcher.$Attempts.{$Station} and (player.age - Watcher.$Attempts.{$Station}.{1}) lt $ForceCooldown">
                     <return/>
                 </do_if>
-                <do_if value="@State.$Attempts.{$Station} and State.$Attempts.{$Station}.{2} ge $MaxAttempts">
+                <do_if value="@Watcher.$Attempts.{$Station} and Watcher.$Attempts.{$Station}.{2} ge $MaxAttempts">
                     <return/>
                 </do_if>
 
@@ -227,6 +245,7 @@
                     </do_if>
                 </do_all>
                 <do_if value="$Slots.count lt $MinFreeSlots">
+                    <debug_text text="'DrJele black market leads: only %s free leak slot(s) on %s'.[$Slots.count, $Station.knownname]" chance="$DebugChance"/>
                     <return/>
                 </do_if>
 
@@ -245,9 +264,9 @@
                     <signal_cue_instantly cue="md.Signal_Leaks.Manager.GenerateSignalLeaks" param="$Station"/>
                 </do_else>
 
-                <set_value name="State.$Attempts.{$Station}"
-                           exact="[player.age, (if @State.$Attempts.{$Station} then State.$Attempts.{$Station}.{2} else 0) + 1, player.age]"/>
-                <debug_text text="'DrJele black market leads: planted a lead on %s (%s), attempt %s, mode %s'.[$Station.knownname, $Station.sector.knownname, State.$Attempts.{$Station}.{2}, $ForceMode]"
+                <set_value name="Watcher.$Attempts.{$Station}"
+                           exact="[player.age, (if @Watcher.$Attempts.{$Station} then Watcher.$Attempts.{$Station}.{2} else 0) + 1, player.age]"/>
+                <debug_text text="'DrJele black market leads: planted a lead on %s (%s), attempt %s, mode %s'.[$Station.knownname, $Station.sector.knownname, Watcher.$Attempts.{$Station}.{2}, $ForceMode]"
                             chance="$DebugChance"/>
             </actions>
         </library>
@@ -257,8 +276,8 @@
             <actions>
                 <set_value name="$ReportLogbook" exact="if global.$DrJeleBlackMarketLogbook? then global.$DrJeleBlackMarketLogbook else (if @global.$DrJeleBlackMarketLeadsConfig.$Logbook then global.$DrJeleBlackMarketLeadsConfig.$Logbook else 1)"/>
                 <set_value name="$ReportNotify" exact="if global.$DrJeleBlackMarketNotify? then global.$DrJeleBlackMarketNotify else (if @global.$DrJeleBlackMarketLeadsConfig.$Notify then global.$DrJeleBlackMarketLeadsConfig.$Notify else 1)"/>
-                <do_if value="1 == $ReportLogbook and @$Station.exists and not @State.$Announced.{$Station}">
-                    <set_value name="State.$Announced.{$Station}" exact="player.age"/>
+                <do_if value="1 == $ReportLogbook and @$Station.exists and not @Watcher.$Announced.{$Station}">
+                    <set_value name="Watcher.$Announced.{$Station}" exact="player.age"/>
                     <do_if value="$Station.hasrelation.dock.{faction.player}">
                         <set_value name="$ReportText" exact="'%s - %s. Scan the hull for a signal leak.'.[$Station.knownname, $Station.sector.knownname]"/>
                     </do_if>
@@ -280,16 +299,16 @@
         <!-- Reverse iteration is mandatory: the table is mutated while it is walked. -->
         <library name="PruneState">
             <actions>
-                <do_all exact="State.$Attempts.keys.count" counter="$PruneIndex" reverse="true">
-                    <set_value name="$PruneKey" exact="State.$Attempts.keys.list.{$PruneIndex}"/>
-                    <do_if value="not @$PruneKey.exists or @$PruneKey.shadyguy.tradesvisible or (player.age - State.$Attempts.{$PruneKey}.{3}) gt 2h">
-                        <remove_value name="State.$Attempts.{$PruneKey}"/>
+                <do_all exact="Watcher.$Attempts.keys.count" counter="$PruneIndex" reverse="true">
+                    <set_value name="$PruneKey" exact="Watcher.$Attempts.keys.list.{$PruneIndex}"/>
+                    <do_if value="not @$PruneKey.exists or @$PruneKey.shadyguy.tradesvisible or (player.age - Watcher.$Attempts.{$PruneKey}.{3}) gt 2h">
+                        <remove_value name="Watcher.$Attempts.{$PruneKey}"/>
                     </do_if>
                 </do_all>
-                <do_all exact="State.$Announced.keys.count" counter="$PruneIndex" reverse="true">
-                    <set_value name="$PruneKey" exact="State.$Announced.keys.list.{$PruneIndex}"/>
+                <do_all exact="Watcher.$Announced.keys.count" counter="$PruneIndex" reverse="true">
+                    <set_value name="$PruneKey" exact="Watcher.$Announced.keys.list.{$PruneIndex}"/>
                     <do_if value="not @$PruneKey.exists or @$PruneKey.shadyguy.tradesvisible">
-                        <remove_value name="State.$Announced.{$PruneKey}"/>
+                        <remove_value name="Watcher.$Announced.{$PruneKey}"/>
                     </do_if>
                 </do_all>
                 <remove_value name="$PruneKey"/>

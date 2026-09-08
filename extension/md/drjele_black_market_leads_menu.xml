@@ -65,7 +65,7 @@
                             $section   = 'main',
                             $text      = 'Black Market Leads',
                             $text2     = if $Target.shadyguy.tradesvisible then 'unlocked' else 'locked',
-                            $icon      = 'shadyguy',
+                            $icon      = 'npc_shadyguy',
                             $mouseover = 'A black marketeer is aboard %s'.[$Target.knownname],
                             $callback  = OpenStandaloneMenu,
                             ]"/>
@@ -195,7 +195,7 @@
                     <do_elseif value="not $Station.hasrelation.dock.{faction.player}">
                         <set_value name="$Status" exact="'Locked - no docking permission'"/>
                     </do_elseif>
-                    <do_elseif value="@md.DrJele_BlackMarketLeads.State.$Attempts.{$Station} and md.DrJele_BlackMarketLeads.State.$Attempts.{$Station}.{2} ge $MaxAttempts">
+                    <do_elseif value="@md.DrJele_BlackMarketLeads.Watcher.$Attempts.{$Station} and md.DrJele_BlackMarketLeads.Watcher.$Attempts.{$Station}.{2} ge $MaxAttempts">
                         <set_value name="$Status" exact="'Locked - no lead could be placed'"/>
                     </do_elseif>
                     <do_else>

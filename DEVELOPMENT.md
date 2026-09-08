@@ -38,7 +38,9 @@ Relevant properties: `station.shadyguy` (entity or null), `npc.isshadyguy`, `npc
 
 The mod is entirely event driven; there is no periodic scan. `md.$ShadyGuyMap` holds roughly one entry per sector, so a poll over it would be a few hundred property lookups every few seconds for nothing.
 
-There is exactly one walk of the map, in `SectorArrived`. It fires on `event_object_changed_sector object="player.entity"` and on `md.Setup.Start`, the same pair vanilla uses in `Signal_Leaks.Manager.PlayerChangesSpace`. The load trigger matters: without it, installing the mod and loading a save leaves the watch group empty until the player happens to change sector. Teleporting counts as a sector change, because the player entity really does move. It rebuilds the `State.$Watched` group with the stations in the player's new sector whose marketeer is still locked — normally one, occasionally two. Everything after that hangs off events on that handful of objects: `StationApproached` on `event_object_changed_attention group="State.$Watched"` when a station crosses to `attention.visible`, and `StationBecameKnown` on `event_object_known_to_player group="State.$Watched"`. The XSD documents `groupeventsource` as "the group is required to exist but may be empty; adding/removing group members is possible even after the event is set up", which is what makes rebuilding the group under a live listener safe.
+There is exactly one walk of the map, in `SectorArrived`. It fires on `event_object_changed_sector object="player.entity"` and on `md.Setup.Start`, the same pair vanilla uses in `Signal_Leaks.Manager.PlayerChangesSpace`. The load trigger matters: without it, installing the mod and loading a save leaves the watch group empty until the player happens to change sector. Teleporting counts as a sector change, because the player entity really does move. It rebuilds the `Watcher.$Watched` group with the stations in the player's new sector whose marketeer is still locked — normally one, occasionally two. Everything after that hangs off events on that handful of objects: `StationApproached` on `event_object_changed_attention group="$Watched"` when a station crosses to `attention.visible`, and `StationBecameKnown` on `event_object_known_to_player group="$Watched"`. The group and the cues that listen on it must live in one cue tree. As siblings the group does not exist yet when the events are set up, and the game says so twice per listener — `Property lookup failed` then `Evaluated value 'null' is not of type group`. Hence the `Watcher` parent, which mirrors `Signal_Leaks.Manager` and `NPC_ShadyGuy.GameStarted`. The two listener cues deliberately have no `namespace="this"`, so the bare `$Watched` in their conditions resolves in the parent namespace, exactly as `Manager.ObjectChangedAttention` does; their action blocks run atomically, so sharing `$Station` between them is safe. `SectorArrived` and `Evaluate` do carry `namespace="this"`, because both hold values across a delay and their instances overlap.
+
+The XSD documents `groupeventsource` as "the group is required to exist but may be empty; adding/removing group members is possible even after the event is set up", which is what makes rebuilding the group under a live listener safe.
 
 `attention.visible` is the right trigger for two reasons: it is the moment the player is actually close enough to scan, and it is the same moment vanilla's own `Manager.ObjectChangedAttention` seeds the station, so the mod arrives right after vanilla has had its turn.
 
@@ -110,3 +112,13 @@ Not yet run. Install, restart X4 — a brand-new mdscript is not picked up by `/
 - Whether `Manager.PlaceMissionLeakOnSurface` behaves when signalled from outside `Manager`. It is `namespace="this"` and resolves `Manager.$Leaks` up its own static chain, which should make it independent of the signaller, but that is inference from the source rather than observation.
 - Whether `Make_Button`'s `$text` accepts a plain string or needs a TextProperty table.
 - `extension/preview.jpg` is still the placeholder copied from `x4-unique-ship-limits` and must be replaced before publishing.
+
+## Runtime traps found in game
+
+Three things the schema validated happily and the game rejected on the first load.
+
+`'@' cannot be combined with '?'`. `@md.Signal_Leaks.Manager.$CleanupTable.{$Station}?` is a parse error, and it takes the whole enclosing library down with it. Existence of a table key without either operator is `@<table>.keys.indexof.{$key}`.
+
+`Evaluated value 'null' is not of type group`, twice per listener. Event conditions are set up when the script loads, before a sibling cue's actions have created the group. Groups and the cues that listen on them belong in the same cue tree.
+
+`No texture found for icon name 'shadyguy'`. `libraries/icons.xml` defines both `shadyguy` and `npc_shadyguy`, but only the latter resolves as a UI texture; it is also the one `menu_map.lua` uses in the map legend.
