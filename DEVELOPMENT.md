@@ -160,3 +160,15 @@ A second script, `drjele_black_market_leads_menu.xml`, registered a table of kno
 It worked, and it was removed anyway. In play the logbook entry says everything the list did, at the moment it matters, without opening a menu; and the right-click entry could not open the standalone menu without dropping the player out of the map. Everything it taught is recorded above and in the two trap sections below — the string keyed table, and `Register_Options_Menu` needing an explicit `$enabled`. `git show ae529f9:extension/md/drjele_black_market_leads_menu.xml` has the last working version.
 
 Dropping it also removed the three options that only fed it, and left the mod matching the shape of every sibling repo: one script with the behaviour, one with the settings.
+
+## Why there is no row in the station info panel
+
+The obvious place for "this station has a black marketeer" is a row next to `Updating Trade Offers` in the object info panel. It was investigated and rejected.
+
+That row is built in `menu.setupInfoSubmenuRows()` in `ui/addons/ego_detailmonitor/menu_map.lua`, a local function, so it cannot be reached from outside. kuertee's **UI Extensions and HUD** (`ws_3477279743`) substitutes `menu_map.xpl` and fires `menu.uix_callbacks["utRenaming_setupInfoSubmenuRows_on_end"](mode, inputtable, inputobject, instance)` at the end of it, which is a usable seam — a row could be appended, though only at the end of the section, not beside the trade subscription row.
+
+The data is already there too: `C.GetSpecialNPCs(object64).shadyGuy`, the same call `ui/core/lua/targetsystem.lua` uses to draw the `npc_shadyguy` icon on a target element.
+
+Rejected because it would turn a mod with no required dependency into one that hard-depends on a third party UI framework, and add the mod's first Lua, to draw a line the logbook entry already delivers at the moment it matters. `GetSpecialNPCs` also exposes only `shadyGuy`, not `tradesvisible`, so "discovered" would need an MD to Lua pipe on top.
+
+Unresolved, and worth knowing before revisiting: whether `GetSpecialNPCs().shadyGuy` is true for still locked marketeers. If it is, the game already draws the icon on those stations and the row is largely redundant anyway.
