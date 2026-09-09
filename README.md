@@ -60,14 +60,14 @@ With it off, the mod only steps in when the station has no mission leak at all, 
 
 With SirNukes Mod Support APIs installed: **Options → Extension Options → Black Market Leads**.
 
-| Setting | Default | What it does |
-| --- | --- | --- |
-| Plant a lead worth scanning | on | Seeds the unlock lead on a known station whose marketeer is locked |
-| Only the black market lead | on | Clears the decoy mission leaks off such a station and leaves a single black market one |
-| Retry the same station after | 30 min | Cooldown before a second attempt on the same station |
-| Logbook entry for a new lead | on | One entry under Tips per station, clickable to the map |
-| Ticker line for a new lead | on | Also shows a short ticker message |
-| Write decisions to the debug log | off | Needs the game started with `-debug scripts` |
+| Setting                          | Default | What it does                                                                           |
+|----------------------------------|---------|----------------------------------------------------------------------------------------|
+| Plant a lead worth scanning      | on      | Seeds the unlock lead on a known station whose marketeer is locked                     |
+| Only the black market lead       | on      | Clears the decoy mission leaks off such a station and leaves a single black market one |
+| Retry the same station after     | 30 min  | Cooldown before a second attempt on the same station                                   |
+| Logbook entry for a new lead     | on      | One entry under Tips per station, clickable to the map                                 |
+| Ticker line for a new lead       | on      | Also shows a short ticker message                                                      |
+| Write decisions to the debug log | off     | Needs the game started with `-debug scripts`                                           |
 
 ## Configuring without the settings menu
 
@@ -98,15 +98,15 @@ DrJele black market leads: Wharf Argon Prime already carries 3 leak(s), 1 of the
 
 **Verified in game on 9.00**, on a 49-day save:
 
-| Check | Result |
-|---|---|
-| Sector pass | fires on arrival and on savegame load; reported 0, 2, 3 and 5 stations across four sectors |
-| Reporting | logbook entry and ticker line appear on entering the sector |
-| Watch group | attention events on it drive every later step; no polling |
-| Decoys | vanilla seeds a station to eight leaks with four mission leaks in one pass, and the mod clears them |
-| Single lead | after the clear, the black market delivery was found on the first mission leak scanned |
+| Check         | Result                                                                                                             |
+|---------------|--------------------------------------------------------------------------------------------------------------------|
+| Sector pass   | fires on arrival and on savegame load; reported 0, 2, 3 and 5 stations across four sectors                         |
+| Reporting     | logbook entry and ticker line appear on entering the sector                                                        |
+| Watch group   | attention events on it drive every later step; no polling                                                          |
+| Decoys        | vanilla seeds a station to eight leaks with four mission leaks in one pass, and the mod clears them                |
+| Single lead   | after the clear, the black market delivery was found on the first mission leak scanned                             |
 | Version patch | the `sinceversion="2"` reset cleared stale bookkeeping on load, and the affected stations were reprocessed at once |
-| Script errors | none |
+| Script errors | none                                                                                                               |
 
 Not exercised yet: the `Plant a lead worth scanning` path with **Only the black market lead** turned off, and completing the delivery through to `tradesvisible`.
 
@@ -114,17 +114,17 @@ There is deliberately no in-game list. One was built — a table of known market
 
 All three scripts validate against `md/md.xsd` extracted from the 9.00 archives, with no errors. The mechanism itself is read straight out of the shipped files rather than inferred:
 
-| Claim                                                            | Where it comes from                                                                                              |
-|------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| marketeers live in `md.$ShadyGuyMap`, one per sector             | `md/npc_shadyguy.xml`, cues `GameStarted.Init`, `EvaluateSectors`, `AddShadyGuys`                                 |
-| the character is absent until unlocked                           | `md/npc_instantiation.xml`, cue `PlaceShadyGuy`, gated on `$ShadyGuy.tradesvisible`                              |
-| the trade options are greyed out until unlocked                  | `md/npc_itemtrader.xml`, cue `DefaultComm`, tooltip `{1002,12075}`                                              |
-| the first mission leak on such a station is always the unlock one | `md/signal_leaks.xml`, `Manager.GenerateSignalLeaks`, the `$i == 1` branch selecting `$ShadyGuyMissionTable`      |
-| the reward is the unlock itself                                  | `md/gm_bringitems.xml`, `set_entity_traits tradesvisible="true"` plus `unlock_achievement BLACK_MARKET`          |
-| no docking permission means the lead is destroyed again          | `md/signal_leaks.xml`, `Manager.GM_BringItems__Trigger` → `$SetupFailed` → `Mission_Selector` reset → `MissionLeak_Cleanup` |
-| a station can never roll zero mission leaks                      | `md/signal_leaks.xml`, library `CalculateLeakCounts`, `min="1"` on both rolls, `$MaxLeaks = 8`                    |
-| the watch group may be rebuilt under a live listener             | `libraries/common.xsd`, `groupeventsource`: "adding/removing group members is possible even after the event is set up" |
-| `<return/>` only works in a `run_actions` library                | `libraries/common.xsd`, element `return`; there is no cue-level `<return/>` anywhere in the shipped scripts       |
+| Claim                                                             | Where it comes from                                                                                                         |
+|-------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| marketeers live in `md.$ShadyGuyMap`, one per sector              | `md/npc_shadyguy.xml`, cues `GameStarted.Init`, `EvaluateSectors`, `AddShadyGuys`                                           |
+| the character is absent until unlocked                            | `md/npc_instantiation.xml`, cue `PlaceShadyGuy`, gated on `$ShadyGuy.tradesvisible`                                         |
+| the trade options are greyed out until unlocked                   | `md/npc_itemtrader.xml`, cue `DefaultComm`, tooltip `{1002,12075}`                                                          |
+| the first mission leak on such a station is always the unlock one | `md/signal_leaks.xml`, `Manager.GenerateSignalLeaks`, the `$i == 1` branch selecting `$ShadyGuyMissionTable`                |
+| the reward is the unlock itself                                   | `md/gm_bringitems.xml`, `set_entity_traits tradesvisible="true"` plus `unlock_achievement BLACK_MARKET`                     |
+| no docking permission means the lead is destroyed again           | `md/signal_leaks.xml`, `Manager.GM_BringItems__Trigger` → `$SetupFailed` → `Mission_Selector` reset → `MissionLeak_Cleanup` |
+| a station can never roll zero mission leaks                       | `md/signal_leaks.xml`, library `CalculateLeakCounts`, `min="1"` on both rolls, `$MaxLeaks = 8`                              |
+| the watch group may be rebuilt under a live listener              | `libraries/common.xsd`, `groupeventsource`: "adding/removing group members is possible even after the event is set up"      |
+| `<return/>` only works in a `run_actions` library                 | `libraries/common.xsd`, element `return`; there is no cue-level `<return/>` anywhere in the shipped scripts                 |
 
 What still needs a run in game is listed under **Open questions** in [DEVELOPMENT.md](DEVELOPMENT.md), together with the test procedure.
 
