@@ -68,7 +68,7 @@
                         param="table[
             $id        = 'drjele_black_market_debug',
             $category  = 'Black Market Leads',
-            $name      = 'Write decisions to the debug log',
+            $name      = 'Debug logging',
             $mouseover = 'Logs every station the mod looked at and why it did or did not plant a lead. Needs the game started with -debug scripts.',
             $type      = 'button',
             $default   = 0,

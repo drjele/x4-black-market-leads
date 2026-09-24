@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v1.0.1] - 2026-09-24 - Debug logging name
+
+### Changed
+
+- The debug option is named **Debug logging**, the same as in the other DrJele mods. Its stored setting carries over.
+
 ## [v1.0.0] - 2026-09-09 - Initial release
 
 ### Added
@@ -29,4 +35,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Nothing is ever reported, listed or acted on for a station the game does not consider known to the player, so exploration is unchanged.
 - Stations without docking permission are never given a lead, because the vanilla mission setup rejects them and destroys the leak it just created.
 
+[v1.0.1]: https://github.com/drjele/x4-black-market-leads/releases/tag/v1.0.1
 [v1.0.0]: https://github.com/drjele/x4-black-market-leads/releases/tag/v1.0.0

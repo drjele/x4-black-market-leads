@@ -60,14 +60,14 @@ With it off, the mod only steps in when the station has no mission leak at all, 
 
 With SirNukes Mod Support APIs installed: **Options → Extension Options → Black Market Leads**.
 
-| Setting                          | Default | What it does                                                                           |
-|----------------------------------|---------|----------------------------------------------------------------------------------------|
-| Plant a lead worth scanning      | on      | Seeds the unlock lead on a known station whose marketeer is locked                     |
-| Only the black market lead       | on      | Clears the decoy mission leaks off such a station and leaves a single black market one |
-| Retry the same station after     | 30 min  | Cooldown before a second attempt on the same station                                   |
-| Logbook entry for a new lead     | on      | One entry under Tips per station, clickable to the map                                 |
-| Ticker line for a new lead       | on      | Also shows a short ticker message                                                      |
-| Write decisions to the debug log | off     | Needs the game started with `-debug scripts`                                           |
+| Setting                      | Default | What it does                                                                           |
+|------------------------------|---------|----------------------------------------------------------------------------------------|
+| Plant a lead worth scanning  | on      | Seeds the unlock lead on a known station whose marketeer is locked                     |
+| Only the black market lead   | on      | Clears the decoy mission leaks off such a station and leaves a single black market one |
+| Retry the same station after | 30 min  | Cooldown before a second attempt on the same station                                   |
+| Logbook entry for a new lead | on      | One entry under Tips per station, clickable to the map                                 |
+| Ticker line for a new lead   | on      | Also shows a short ticker message                                                      |
+| Debug logging                | off     | Needs the game started with `-debug scripts`                                           |
 
 ## Configuring without the settings menu
 
@@ -86,7 +86,7 @@ Add this to the game's launch options — Steam, right click X4, **Properties �
 
 The log lands next to your savegames: `$HOME/.config/EgoSoft/X4/<userid>/debuglog.txt` on Linux, `Documents\Egosoft\X4\<userid>\debuglog.txt` on Windows. If Steam is installed as a snap it runs the game with a redirected home, which puts both under `~/snap/steam/common/`.
 
-The mod is silent by default. Turn on **Write decisions to the debug log**, or set `$DebugChance` to `100` in the configuration cue of `extension/md/drjele_black_market_leads.xml`, and every decision is written out:
+The mod is silent by default. Turn on **Debug logging**, or set `$DebugChance` to `100` in the configuration cue of `extension/md/drjele_black_market_leads.xml`, and every decision is written out:
 
 ```
 DrJele black market leads: 1 watched station(s) in Argon Prime
